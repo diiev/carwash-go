@@ -11,18 +11,17 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// КОНФИГУРАЦИЯ БД
 const (
 	DBHost = "127.0.0.1"
 	DBPort = "3306"
-	DBUser = "diiev"
-	DBPass = "331995577Qs"
+	DBUser = "diiev"       // Твой пользователь БД
+	DBPass = "331995577Qs" // Твой пароль от БД
 	DBName = "carwash_db"
 )
 
 var db *sql.DB
 
-// --- МОДЕЛИ ДАННЫХ ---
+// --- МОДЕЛИ ---
 type User struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
@@ -31,94 +30,76 @@ type User struct {
 	Name     string `json:"name"`
 	IsActive int    `json:"is_active"`
 }
-
 type Service struct {
 	ID       int     `json:"id"`
 	Name     string  `json:"name"`
 	Price    float64 `json:"price"`
 	IsActive int     `json:"is_active"`
 }
-
 type Wash struct {
-	ID          int     `json:"id"`
-	UserID      int     `json:"user_id"`
-	CarModel    string  `json:"car_model"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
-	DateOnly    string  `json:"date_only"`
-	WorkerName  string  `json:"worker_name,omitempty"`
+	ID           int     `json:"id"`
+	UserID       int     `json:"user_id"`
+	CoWorkerID   *int    `json:"co_worker_id"` // Может быть null
+	CarModel     string  `json:"car_model"`
+	Description  string  `json:"description"`
+	Price        float64 `json:"price"`
+	DateOnly     string  `json:"date_only"`
+	WorkerName   string  `json:"worker_name"`
+	CoWorkerName *string `json:"co_worker_name"` // Имя напарника
 }
-
 type Expense struct {
 	ID       int     `json:"id"`
 	Title    string  `json:"title"`
 	Amount   float64 `json:"amount"`
 	DateOnly string  `json:"date_only"`
 }
-
-// Структура для приема данных от Vue
 type Payload struct {
-	Action string `json:"-"` // Из URL
+	Action string `json:"-"`
 	ID     int    `json:"id"`
-
 	// User
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
 	Name     string `json:"name"`
 	IsActive *int   `json:"is_active"`
-
-	// Service (специальные поля, чтобы не путаться)
+	// Service
 	ServiceName  string  `json:"service_name"`
 	ServicePrice float64 `json:"service_price"`
-
-	// Wash / Expense
+	// Wash
 	UserID      int     `json:"user_id"`
+	CoWorkerID  *int    `json:"co_worker_id"`
 	CarModel    string  `json:"car_model"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price"`
 	Title       string  `json:"title"`
 	Amount      float64 `json:"amount"`
 	Date        string  `json:"date"`
-
-	// Filters
-	Start    string `json:"start"`
-	End      string `json:"end"`
-	FilterID int    `json:"filter_id"` // ID работника для фильтра
+	Start       string  `json:"start"`
+	End         string  `json:"end"`
+	FilterID    int     `json:"filter_id"`
 }
 
 func main() {
-	// Логирование в файл (опционально)
 	f, err := os.OpenFile("server.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(f)
 	}
 
-	// Подключение к БД
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4", DBUser, DBPass, DBHost, DBPort, DBName)
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
-		log.Fatal("Error creating DB pool: ", err)
+		log.Fatal(err)
 	}
 	defer db.Close()
-
 	if err = db.Ping(); err != nil {
-		log.Fatal("Error connecting to DB: ", err)
+		log.Fatal(err)
 	}
-	fmt.Println("Connected to MariaDB!")
+	fmt.Println("Connected to DB!")
 
-	// 1. API Handlers
 	http.HandleFunc("/api", corsMiddleware(apiHandler))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "index.html") })
 
-	// 2. Static Files (Раздаем index.html)
-	// Если запрашивают корень "/", отдаем index.html
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
-	})
-
-	// Запуск на 80 порту (стандартный веб)
 	fmt.Println("Server running on port 80...")
-	// На Linux для 80 порта нужны права root (sudo)
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
 
@@ -143,7 +124,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
-	// Auth & Users
 	case "login":
 		var u User
 		err := db.QueryRow("SELECT id, username, password, role, name, is_active FROM users WHERE username=? AND is_active=1", p.Username).Scan(&u.ID, &u.Username, &u.Password, &u.Role, &u.Name, &u.IsActive)
@@ -153,6 +133,15 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u.Password = ""
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "user": u})
+
+	case "update_profile": // Обновление своего профиля (логин/пароль)
+		var err error
+		if p.Password != "" {
+			_, err = db.Exec("UPDATE users SET username=?, password=? WHERE id=?", p.Username, p.Password, p.ID)
+		} else {
+			_, err = db.Exec("UPDATE users SET username=? WHERE id=?", p.Username, p.ID)
+		}
+		send(w, err)
 
 	case "get_users":
 		rows, _ := db.Query("SELECT id, username, role, name, is_active FROM users ORDER BY is_active DESC, name ASC")
@@ -184,12 +173,10 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			_, err = db.Exec("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)", p.Username, p.Password, p.Role, p.Name)
 		}
 		send(w, err)
-
 	case "delete_user":
 		_, err := db.Exec("UPDATE users SET is_active = 0 WHERE id = ?", p.ID)
 		send(w, err)
 
-	// Services
 	case "get_services":
 		rows, _ := db.Query("SELECT id, name, price, is_active FROM services WHERE is_active = 1 ORDER BY price ASC")
 		defer rows.Close()
@@ -203,7 +190,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			res = []Service{}
 		}
 		json.NewEncoder(w).Encode(res)
-
 	case "save_service":
 		var err error
 		if p.ID > 0 {
@@ -212,61 +198,65 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			_, err = db.Exec("INSERT INTO services (name, price) VALUES (?, ?)", p.ServiceName, p.ServicePrice)
 		}
 		send(w, err)
-
 	case "delete_service":
 		_, err := db.Exec("UPDATE services SET is_active = 0 WHERE id = ?", p.ID)
 		send(w, err)
 
-	// Washes
 	case "add_wash":
-		_, err := db.Exec("INSERT INTO washes (user_id, car_model, description, price, date_only) VALUES (?, ?, ?, ?, ?)", p.UserID, p.CarModel, p.Description, p.Price, p.Date)
+		_, err := db.Exec("INSERT INTO washes (user_id, co_worker_id, car_model, description, price, date_only) VALUES (?, ?, ?, ?, ?, ?)", p.UserID, p.CoWorkerID, p.CarModel, p.Description, p.Price, p.Date)
 		send(w, err)
-
 	case "edit_wash":
-		_, err := db.Exec("UPDATE washes SET car_model=?, description=?, price=?, date_only=?, user_id=? WHERE id=?", p.CarModel, p.Description, p.Price, p.Date, p.UserID, p.ID)
+		_, err := db.Exec("UPDATE washes SET car_model=?, description=?, price=?, date_only=?, user_id=?, co_worker_id=? WHERE id=?", p.CarModel, p.Description, p.Price, p.Date, p.UserID, p.CoWorkerID, p.ID)
 		send(w, err)
-
 	case "delete_wash":
 		_, err := db.Exec("DELETE FROM washes WHERE id=?", p.ID)
 		send(w, err)
 
-	// Expenses
 	case "add_expense":
 		_, err := db.Exec("INSERT INTO expenses (title, amount, date_only) VALUES (?, ?, ?)", p.Title, p.Amount, p.Date)
 		send(w, err)
 
-	// Reports
 	case "get_report":
 		res := make(map[string]interface{})
 		var washes []Wash
-		var expenses []Expense
-
-		// Логика фильтрации моек
-		query := ""
 		var args []interface{}
 
-		if p.Role == "admin" {
-			if p.FilterID > 0 {
-				query = "SELECT w.id, w.user_id, w.car_model, w.description, w.price, w.date_only, u.name FROM washes w LEFT JOIN users u ON w.user_id=u.id WHERE w.date_only BETWEEN ? AND ? AND w.user_id=? ORDER BY w.date_only DESC, w.id DESC"
-				args = []interface{}{p.Start, p.End, p.FilterID}
-			} else {
-				query = "SELECT w.id, w.user_id, w.car_model, w.description, w.price, w.date_only, u.name FROM washes w LEFT JOIN users u ON w.user_id=u.id WHERE w.date_only BETWEEN ? AND ? ORDER BY w.date_only DESC, w.id DESC"
-				args = []interface{}{p.Start, p.End}
-			}
+		query := `SELECT w.id, w.user_id, w.co_worker_id, w.car_model, w.description, w.price, w.date_only, u.name, cu.name 
+				  FROM washes w 
+				  LEFT JOIN users u ON w.user_id = u.id 
+				  LEFT JOIN users cu ON w.co_worker_id = cu.id 
+				  WHERE w.date_only BETWEEN ? AND ? `
+
+		if p.Role == "admin" && p.FilterID > 0 {
+			query += "AND (w.user_id = ? OR w.co_worker_id = ?) "
+			args = []interface{}{p.Start, p.End, p.FilterID, p.FilterID}
+		} else if p.Role == "worker" {
+			query += "AND (w.user_id = ? OR w.co_worker_id = ?) "
+			args = []interface{}{p.Start, p.End, p.UserID, p.UserID}
 		} else {
-			query = "SELECT id, user_id, car_model, description, price, date_only FROM washes WHERE user_id=? AND date_only BETWEEN ? AND ? ORDER BY id DESC"
-			args = []interface{}{p.UserID, p.Start, p.End}
+			args = []interface{}{p.Start, p.End}
 		}
+		query += "ORDER BY w.date_only DESC, w.id DESC"
 
 		rows, err := db.Query(query, args...)
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
 				var w Wash
-				if p.Role == "admin" {
-					rows.Scan(&w.ID, &w.UserID, &w.CarModel, &w.Description, &w.Price, &w.DateOnly, &w.WorkerName)
-				} else {
-					rows.Scan(&w.ID, &w.UserID, &w.CarModel, &w.Description, &w.Price, &w.DateOnly)
+				var cwId sql.NullInt64
+				var wName sql.NullString
+				var cwName sql.NullString
+
+				rows.Scan(&w.ID, &w.UserID, &cwId, &w.CarModel, &w.Description, &w.Price, &w.DateOnly, &wName, &cwName)
+				if cwId.Valid {
+					id := int(cwId.Int64)
+					w.CoWorkerID = &id
+				}
+				if wName.Valid {
+					w.WorkerName = wName.String
+				}
+				if cwName.Valid {
+					w.CoWorkerName = &cwName.String
 				}
 				washes = append(washes, w)
 			}
@@ -275,9 +265,9 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			washes = []Wash{}
 		}
 
-		// Расходы (только админ)
+		var expenses []Expense
 		if p.Role == "admin" {
-			rExp, _ := db.Query("SELECT id, title, amount, date_only FROM expenses WHERE date_only BETWEEN ? AND ?", p.Start, p.End)
+			rExp, _ := db.Query("SELECT id, title, amount, date_only FROM expenses WHERE date_only BETWEEN ? AND ? ORDER BY date_only DESC", p.Start, p.End)
 			if rExp != nil {
 				defer rExp.Close()
 				for rExp.Next() {

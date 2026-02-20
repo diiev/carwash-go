@@ -4,41 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>GUMS CarWash</title>
-    
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
-                    colors: {
-                        primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' },
-                    }
-                }
-            }
+            theme: { extend: { fontFamily: { sans: ['Manrope', 'sans-serif'] }, colors: { primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' } } } }
         }
     </script>
-
     <style>
         body { background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-        
-        /* Скрываем нативные стрелки инпутов */
+        .custom-scroll::-webkit-scrollbar { width: 0px; height: 0px; }
+        .custom-scroll { scrollbar-width: none; } /* Firefox */
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        /* Скрываем нативный календарь, оставляем только кликабельную область */
         input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; }
-        
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
         .slide-up-enter-active { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .slide-up-enter-from { transform: translateY(20px); opacity: 0; }
-
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .pb-safe { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
         .pt-safe { padding-top: env(safe-area-inset-top); }
     </style>
 </head>
@@ -53,13 +38,41 @@
         </div>
     </transition-group>
 
-    <transition name="fade"><div v-if="confirmState.show" class="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 class="text-xl font-bold text-center mb-2">Вы уверены?</h3>
-            <p class="text-center text-slate-500 text-sm mb-6">{{ confirmState.message }}</p>
-            <div class="grid grid-cols-2 gap-3"><button @click="confirmState.show=false" class="py-3 bg-slate-100 font-bold rounded-xl text-slate-600">Отмена</button><button @click="confirmState.action()" class="py-3 bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-500/30">Да</button></div>
+    <transition name="fade">
+        <div v-if="confirmState.show" class="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+                <h3 class="text-xl font-bold text-center mb-2">Вы уверены?</h3>
+                <p class="text-center text-slate-500 text-sm mb-6">{{ confirmState.message }}</p>
+                <div class="grid grid-cols-2 gap-3"><button @click="confirmState.show=false" class="py-3 bg-slate-100 font-bold rounded-xl text-slate-600">Отмена</button><button @click="confirmState.action()" class="py-3 bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-500/30">Да</button></div>
+            </div>
         </div>
-    </div></transition>
+    </transition>
+
+    <transition name="fade">
+        <div v-if="showProfileModal" class="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-extrabold text-xl text-slate-800">Мой профиль</h3>
+                    <button @click="showProfileModal=false" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Имя (нельзя изменить)</label>
+                        <input :value="profileForm.name" disabled class="w-full bg-slate-100 text-slate-400 border-0 rounded-xl p-3 font-semibold cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Логин</label>
+                        <input v-model="profileForm.username" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Новый пароль</label>
+                        <input v-model="profileForm.password" placeholder="Оставьте пустым, если не меняете" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="mt-8 flex gap-3"><button @click="showProfileModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition">Отмена</button><button @click="saveProfile" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg transition">Сохранить</button></div>
+            </div>
+        </div>
+    </transition>
 
     <div v-if="!user" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-6 bg-[url('https://images.unsplash.com/photo-1601362840469-51e4d8d58785?q=80&w=2070')] bg-cover">
         <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
@@ -67,124 +80,147 @@
             <div class="text-center mb-8"><h1 class="text-4xl font-extrabold text-white">GUMS</h1><p class="text-blue-200 text-sm">CarWash</p></div>
             <input v-model="loginForm.username" placeholder="Логин" class="w-full mb-3 py-4 px-4 bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/50 focus:bg-white/20 outline-none transition">
             <input v-model="loginForm.password" type="password" placeholder="Пароль" class="w-full mb-6 py-4 px-4 bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/50 focus:bg-white/20 outline-none transition">
-            <button @click="login" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/40">Войти</button>
+            <button @click="login" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/40 hover:bg-blue-500 active:scale-95 transition">Войти</button>
             <p v-if="loginError" class="text-red-300 text-center mt-4 text-sm">{{ loginError }}</p>
         </div>
     </div>
 
     <template v-else>
+        
         <aside class="hidden md:flex w-72 flex-col bg-white border-r border-slate-200 z-20">
-            <div class="p-8 pb-4"><h2 class="text-2xl font-extrabold text-slate-900">GUMS</h2><p class="text-xs text-slate-400 mt-1">{{ user.name }} ({{ user.role }})</p></div>
+            <div class="p-8 pb-4">
+                <h2 class="text-2xl font-extrabold text-slate-900">GUMS</h2>
+                <div @click="openProfileModal" class="mt-4 flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition group">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 transition">{{ user.name[0] }}</div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-800">{{ user.name }}</p>
+                        <p class="text-[10px] uppercase font-bold text-blue-500">Профиль <i class="fas fa-cog ml-1"></i></p>
+                    </div>
+                </div>
+            </div>
             <nav class="flex-1 px-4 space-y-1 mt-4">
-                <a v-for="tab in tabs" :key="tab.id" @click="canAccess(tab)?currentTab=tab.id:null" v-show="canAccess(tab)" :class="currentTab===tab.id?'bg-blue-50 text-blue-700 font-bold':'text-slate-500 hover:bg-slate-50'" class="flex items-center gap-4 px-4 py-3.5 rounded-xl cursor-pointer transition">
+                <a v-for="tab in tabs" :key="tab.id" @click="canAccess(tab) ? currentTab = tab.id : null" v-show="canAccess(tab)" 
+                   :class="currentTab === tab.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-500 hover:bg-slate-50'" 
+                   class="flex items-center gap-4 px-4 py-3.5 rounded-xl cursor-pointer transition">
                     <i :class="tab.icon" class="w-5 text-center"></i> {{ tab.label }}
                 </a>
             </nav>
-            <div class="p-4"><button @click="logout" class="w-full py-3 rounded-xl text-slate-400 hover:text-red-500 font-medium">Выход</button></div>
+            <div class="p-4"><button @click="logout" class="w-full py-3 rounded-xl text-slate-400 hover:text-red-500 font-medium transition">Выход</button></div>
         </aside>
 
         <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+            
             <header class="md:hidden bg-white/80 backdrop-blur-md p-4 pt-safe flex justify-between items-center shadow-sm z-30 sticky top-0">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 bg-blue-600 rounded-lg text-white flex items-center justify-center shadow-blue-500/30"><i class="fas fa-soap text-sm"></i></div>
-                    <div><h1 class="font-bold text-slate-900 leading-none">GUMS</h1><p class="text-[10px] text-slate-400 font-medium mt-1">{{ user.name }}</p></div>
+                <div class="flex items-center gap-3" @click="openProfileModal">
+                    <div class="w-9 h-9 bg-blue-600 rounded-lg text-white flex items-center justify-center shadow-blue-500/30 font-bold">{{ user.name[0] }}</div>
+                    <div>
+                        <h1 class="font-bold text-slate-900 leading-none">GUMS</h1>
+                        <p class="text-[10px] font-bold text-blue-500 uppercase mt-1 flex items-center gap-1">Профиль <i class="fas fa-cog"></i></p>
+                    </div>
                 </div>
                 <button @click="logout" class="w-9 h-9 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center"><i class="fas fa-sign-out-alt"></i></button>
             </header>
 
-            <div class="flex-1 custom-scroll p-4 md:p-8 pb-32 md:pb-8">
+            <div class="flex-1 overflow-y-auto custom-scroll p-4 md:p-8 pb-safe md:pb-8 relative">
                 
                 <transition name="fade" mode="out-in">
                 <div v-if="currentTab === 'home'" key="home" class="max-w-6xl mx-auto">
                     
                     <div class="grid grid-cols-2 gap-4 mb-6">
                         <div class="bg-slate-900 p-5 rounded-2xl shadow-xl text-white relative overflow-hidden">
-                            <p class="text-xs text-slate-400 font-bold uppercase mb-1">Выручка ({{ dateLabel }})</p>
+                            <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Выручка ({{ fancyDateLabel }})</p>
                             <p class="text-2xl md:text-3xl font-extrabold">{{ formatMoney(stats.totalRevenue) }}</p>
                         </div>
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                             <p class="text-xs text-slate-400 font-bold uppercase mb-1">Мой доход (50%)</p>
+                             <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Заработок (50%)</p>
                              <p class="text-2xl md:text-3xl font-extrabold text-blue-600">{{ formatMoney(stats.myEarnings) }}</p>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-3xl shadow-lg shadow-slate-200/50 p-6 mb-8 border border-slate-100 relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-5 flex items-center gap-2"><i class="fas fa-plus-circle text-blue-500"></i> Новая запись</h3>
+                    <div v-if="user.role === 'admin'" class="bg-white rounded-3xl shadow-lg shadow-slate-200/50 p-6 mb-8 border border-slate-100 relative overflow-visible">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l-3xl"></div>
+                        <h3 class="font-bold text-lg text-slate-800 mb-5 flex items-center gap-2"><i class="fas fa-plus-circle text-blue-500"></i> Добавить авто</h3>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                            <div class="md:col-span-3">
-                                <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Дата</label>
-                                <div class="relative">
-                                    <input type="date" v-model="newEntry.date" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition appearance-none">
-                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><i class="fas fa-calendar-day"></i></div>
-                                </div>
-                            </div>
-
-                            <div v-if="user.role === 'admin'" class="md:col-span-3">
-                                <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Мойщик</label>
-                                <div class="relative">
-                                    <select v-model="newEntry.selectedWorkerId" class="w-full bg-slate-50 border-0 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer">
-                                        <option v-for="u in selectableWorkers" :value="u.id">{{ u.name }}</option>
-                                    </select>
-                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-blue-500">
-                                        <i class="fas fa-chevron-down text-xs"></i>
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+                            <div class="md:col-span-4 space-y-4">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Дата</label>
+                                        <div class="relative"><input type="date" v-model="newEntry.date" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer"><div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><i class="fas fa-calendar-day"></i></div></div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Марка авто</label>
+                                        <input v-model="newEntry.carModel" placeholder="BMW" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="md:col-span-6 grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Марка</label>
-                                    <input v-model="newEntry.carModel" placeholder="BMW" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                </div>
-                                <div>
-                                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Услуга</label>
+                                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Основой мойщик</label>
                                     <div class="relative">
-                                        <select v-model="selectedService" @change="onServiceChange" class="w-full bg-slate-50 border-0 rounded-xl pl-4 pr-10 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer">
-                                            <option :value="null">Выбрать...</option>
-                                            <option v-for="s in servicesList" :value="s">{{ s.name }} ({{ s.price }})</option>
-                                            <option value="custom">Своя...</option>
+                                        <select v-model="newEntry.selectedWorkerId" class="w-full bg-slate-50 border-0 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer">
+                                            <option :value="user.id">Я ({{ user.name }})</option>
+                                            <option v-for="u in selectableWorkers.filter(u=>u.id!==user.id)" :key="u.id" :value="u.id">{{ u.name }}</option>
                                         </select>
-                                        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                            <i class="fas fa-chevron-down text-xs"></i>
-                                        </div>
+                                        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1 text-blue-500"><i class="fas fa-user-friends"></i> Напарник (Делят 50/50)</label>
+                                    <div class="relative border border-blue-100 rounded-xl bg-blue-50/50">
+                                        <select v-model="newEntry.coWorkerId" class="w-full bg-transparent border-0 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer">
+                                            <option :value="null">Без напарника (Мыли один)</option>
+                                            <option v-for="u in selectableWorkers.filter(u=>u.id!==newEntry.selectedWorkerId)" :key="u.id" :value="u.id">{{ u.name }}</option>
+                                        </select>
+                                        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400"><i class="fas fa-chevron-down text-xs"></i></div>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <div v-if="selectedService === 'custom'" class="md:col-span-8 md:col-start-1">
-                                <input v-model="newEntry.description" placeholder="Описание услуги" class="w-full bg-blue-50 border-0 rounded-xl px-4 py-3 text-sm text-blue-800 focus:ring-2 focus:ring-blue-500 outline-none">
-                            </div>
 
-                            <div class="md:col-span-4 md:col-start-9 flex items-end gap-3">
-                                <div class="relative w-full">
-                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₽</span>
-                                    <input type="number" v-model.number="newEntry.price" placeholder="0" class="w-full bg-white border-2 border-slate-100 rounded-xl pl-8 pr-4 py-3 text-lg font-extrabold text-slate-800 focus:border-blue-500 focus:ring-0 outline-none">
+                            <div class="md:col-span-8 flex flex-col justify-between">
+                                <div>
+                                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2 block pl-1">Услуги (Можно выбрать несколько)</label>
+                                    <div class="flex flex-wrap gap-2 mb-3">
+                                        <button v-for="s in servicesList" :key="s.id" @click="toggleService(s)" 
+                                                class="px-4 py-2 rounded-xl text-sm font-bold transition-all border shadow-sm"
+                                                :class="selectedServices.some(item=>item.id===s.id) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'">
+                                            {{ s.name }} <span class="text-[10px] opacity-80 font-normal ml-1">{{ s.price }}₽</span>
+                                        </button>
+                                        <button @click="toggleCustomService" class="px-4 py-2 rounded-xl text-sm font-bold border border-dashed transition-all"
+                                                :class="customServiceMode ? 'bg-slate-800 text-white border-slate-800' : 'bg-transparent text-slate-500 border-slate-300 hover:border-slate-500'">
+                                            + Своя услуга
+                                        </button>
+                                    </div>
+                                    
+                                    <input v-if="customServiceMode" v-model="customServiceText" @input="updateDescription" placeholder="Напишите название услуги" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-3">
+                                    <p class="text-xs text-slate-500 font-medium pl-1 mb-4 leading-tight">Итоговая услуга: <span class="text-blue-600 font-bold">{{ newEntry.description || 'Не выбрана' }}</span></p>
                                 </div>
-                                <button @click="addWash" :disabled="!newEntry.price" class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white w-16 h-[52px] rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center transition active:scale-95 shrink-0">
-                                    <i class="fas fa-plus text-xl"></i>
-                                </button>
+
+                                <div>
+                                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Сумма</label>
+                                    <div class="flex gap-3">
+                                        <div class="relative w-full">
+                                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₽</span>
+                                            <input type="number" v-model.number="newEntry.price" placeholder="0" class="w-full bg-white border-2 border-slate-200 rounded-xl pl-8 pr-4 py-3 text-xl font-extrabold text-slate-800 focus:border-blue-500 focus:ring-0 outline-none transition shadow-inner">
+                                        </div>
+                                        <button type="button" @click="addWash" :disabled="!newEntry.price || !newEntry.description" class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-400 text-white w-16 rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center transition active:scale-95 shrink-0">
+                                            <i class="fas fa-check text-2xl"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-slate-700 text-lg">Лента</h3>
-                        
                         <div class="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1">
-                            <button @click="changeDay(-1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            
+                            <button @click="changeDay(-1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-left"></i></button>
                             <div class="relative px-3 min-w-[100px] text-center">
                                 <span class="text-sm font-bold text-slate-700 block">{{ fancyDateLabel }}</span>
                                 <input type="date" v-model="homeDate" class="absolute inset-0 opacity-0 cursor-pointer">
                             </div>
-
-                            <button @click="changeDay(1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
+                            <button @click="changeDay(1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-right"></i></button>
                         </div>
                     </div>
 
@@ -194,22 +230,26 @@
                         </div>
 
                         <transition-group name="slide-up">
-                        <div v-for="w in washes" :key="w.id" class="group bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center hover:border-blue-100 transition">
+                        <div v-for="w in washes" :key="w.id" class="group bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:border-blue-100 transition">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                    <i class="fas fa-car-side text-lg"></i>
+                                <div class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shrink-0">
+                                    <i class="fas fa-car-side text-lg" :class="w.co_worker_name ? 'text-indigo-400' : ''"></i>
                                 </div>
                                 <div>
                                     <p class="font-bold text-slate-800">{{ w.car_model || 'Авто' }}</p>
-                                    <div class="flex items-center gap-2 mt-0.5">
-                                        <span class="text-xs font-medium text-slate-500">{{ w.description }}</span>
-                                        <span v-if="user.role === 'admin'" class="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{{ w.worker_name }}</span>
+                                    <p class="text-xs font-medium text-slate-500 mt-0.5 leading-tight">{{ w.description }}</p>
+                                    <div class="flex items-center gap-1 mt-1.5 flex-wrap">
+                                        <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-1"><i class="fas fa-user"></i> {{ w.worker_name }}</span>
+                                        <span v-if="w.co_worker_name" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded flex items-center gap-1"><i class="fas fa-hands-helping"></i> {{ w.co_worker_name }}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-4">
-                                <span class="font-extrabold text-lg text-slate-700">+{{ formatMoney(w.price) }}</span>
-                                <div class="flex gap-2">
+                            <div class="flex items-center justify-between md:justify-end gap-4 border-t md:border-t-0 pt-2 md:pt-0">
+                                <div class="text-left md:text-right">
+                                    <span class="font-extrabold text-lg text-slate-700 block leading-none">+{{ formatMoney(w.price) }}</span>
+                                    <span v-if="w.co_worker_name && user.role === 'worker'" class="text-[10px] text-slate-400 font-medium">Моя доля: {{ formatMoney(w.price / 4) }}</span>
+                                </div>
+                                <div class="flex gap-2" v-if="user.role === 'admin'">
                                     <button @click="openWashModal(w)" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600"><i class="fas fa-pen text-xs"></i></button>
                                     <button @click="deleteWash(w.id)" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-red-500"><i class="fas fa-trash text-xs"></i></button>
                                 </div>
@@ -223,35 +263,53 @@
                 <transition name="fade" mode="out-in">
                 <div v-if="currentTab === 'reports'" key="reports" class="max-w-5xl mx-auto">
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
-                        <h3 class="font-bold text-slate-800 mb-4">Фильтры</h3>
+                        <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-filter text-blue-500"></i> Фильтры</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <div class="relative"><input type="date" v-model="reportDates.start" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
-                            <div class="relative"><input type="date" v-model="reportDates.end" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
-                            <div class="relative" v-if="user.role==='admin'">
+                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Начало</label><input type="date" v-model="reportDates.start" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
+                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Конец</label><input type="date" v-model="reportDates.end" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
+                            <div class="relative" v-if="user.role === 'admin'">
+                                <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Сотрудник</label>
                                 <select v-model="reportFilterId" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-bold text-slate-600 appearance-none">
                                     <option :value="0">Все сотрудники</option>
-                                    <option v-for="u in selectableWorkers" :value="u.id">{{ u.name }}</option>
+                                    <option v-for="u in usersList" :key="u.id" :value="u.id">{{ u.name }}</option>
                                 </select>
-                                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>
+                                <div class="absolute right-3 top-1/2 translate-y-1 pointer-events-none text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>
                             </div>
-                            <button @click="fetchData" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg">Применить</button>
+                            <button @click="fetchData" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-slate-700 transition">Применить</button>
                         </div>
                     </div>
                     
-                    <div v-if="user.role==='admin'" class="space-y-6">
+                    <div v-if="user.role === 'admin'" class="space-y-6">
                         <div class="bg-slate-900 rounded-3xl p-8 shadow-2xl relative overflow-hidden text-white">
                              <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[80px] opacity-20"></div>
-                             <p class="text-sm text-slate-400 mb-1">Чистая прибыль</p>
-                             <h2 class="text-5xl font-extrabold bg-gradient-to-r from-green-300 to-emerald-500 bg-clip-text text-transparent">{{ formatMoney(stats.netProfit) }}</h2>
+                             <p class="text-sm text-slate-400 mb-1 font-bold tracking-widest uppercase">Чистая прибыль</p>
+                             <h2 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-green-300 to-emerald-500 bg-clip-text text-transparent mb-4">{{ formatMoney(stats.netProfit) }}</h2>
+                             <div class="flex flex-wrap gap-4 text-sm bg-white/10 p-3 rounded-xl inline-flex backdrop-blur-md">
+                                 <div>Выручка: <span class="font-bold">{{ formatMoney(stats.totalRevenue) }}</span></div>
+                                 <div class="text-blue-300">Фонд ЗП: <span class="font-bold">-{{ formatMoney(stats.totalRevenue / 2) }}</span></div>
+                                 <div class="text-red-300">Расходы: <span class="font-bold">-{{ formatMoney(stats.totalExpenses) }}</span></div>
+                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                                <h4 class="font-bold mb-4 border-b pb-2">Зарплаты</h4>
-                                <div v-for="(amt, name) in stats.workerBreakdown" class="flex justify-between items-center py-1 text-sm"><span class="font-medium">{{ name }}</span><span class="font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">{{ formatMoney(amt/2) }}</span></div>
+                                <h4 class="font-bold mb-4 border-b pb-2 flex items-center justify-between text-slate-800">Зарплаты (50% от выручки) <span class="text-xs text-blue-500 font-bold bg-blue-50 px-2 py-1 rounded">Итог</span></h4>
+                                <div class="space-y-1">
+                                    <div v-for="(amt, name) in stats.workerBreakdown" :key="name" class="flex justify-between items-center py-2 text-sm border-b border-slate-50 last:border-0">
+                                        <span class="font-medium text-slate-700">{{ name }}</span>
+                                        <span class="font-extrabold text-blue-600">{{ formatMoney(amt) }}</span>
+                                    </div>
+                                    <div v-if="Object.keys(stats.workerBreakdown).length === 0" class="text-center text-slate-400 text-sm py-4">Нет данных</div>
+                                </div>
                              </div>
                              <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                                <h4 class="font-bold mb-4 border-b pb-2">Расходы</h4>
-                                <div v-for="e in expenses" class="flex justify-between items-center py-1 text-sm"><span>{{ e.title }}</span><span class="font-bold text-red-500">-{{ formatMoney(e.amount) }}</span></div>
+                                <h4 class="font-bold mb-4 border-b pb-2 text-slate-800">История расходов</h4>
+                                <div class="overflow-y-auto custom-scroll pr-2 max-h-64 space-y-1">
+                                    <div v-for="e in expenses" :key="e.id" class="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 text-sm">
+                                        <div><p class="font-bold text-slate-700">{{ e.title }}</p><p class="text-[10px] text-slate-400 font-medium">{{ formatDate(e.date_only) }}</p></div>
+                                        <span class="font-extrabold text-red-500">-{{ formatMoney(e.amount) }}</span>
+                                    </div>
+                                    <div v-if="expenses.length === 0" class="text-center text-slate-400 text-sm py-4">Чисто</div>
+                                </div>
                              </div>
                         </div>
                     </div>
@@ -259,53 +317,145 @@
                 </transition>
 
                 <transition name="fade" mode="out-in">
-                <div v-if="['services', 'users'].includes(currentTab)" key="grid" class="max-w-5xl mx-auto">
+                <div v-if="currentTab === 'services' && user.role === 'admin'" key="services" class="max-w-5xl mx-auto">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold">{{ currentTab === 'services' ? 'Прайс' : 'Команда' }}</h2>
-                        <button @click="currentTab === 'services' ? openServiceModal() : openUserModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg"><i class="fas fa-plus"></i></button>
+                        <h2 class="text-2xl font-extrabold text-slate-800">Прайс-лист</h2>
+                        <button @click="openServiceModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition"><i class="fas fa-plus"></i></button>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <template v-if="currentTab === 'services'">
-                            <div v-for="s in servicesList" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative">
-                                <div class="absolute top-4 right-4"><button @click="openServiceModal(s)" class="text-blue-500 mr-2"><i class="fas fa-pen"></i></button><button @click="deleteService(s.id)" class="text-red-400"><i class="fas fa-trash"></i></button></div>
-                                <h3 class="font-bold text-lg">{{ s.name }}</h3><p class="text-2xl font-extrabold text-indigo-600 mt-2">{{ formatMoney(s.price) }}</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div v-for="s in servicesList" :key="s.id" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 relative group flex flex-col justify-between">
+                            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition">
+                                <button @click="openServiceModal(s)" class="text-blue-500 mr-1 p-1 hover:bg-blue-50 rounded"><i class="fas fa-pen"></i></button>
+                                <button @click="deleteService(s.id)" class="text-red-400 p-1 hover:bg-red-50 rounded"><i class="fas fa-trash"></i></button>
                             </div>
-                        </template>
-                        <template v-else>
-                            <div v-for="u in usersList" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative">
-                                <div class="absolute top-4 right-4" v-if="u.username !== 'admin'"><button @click="openUserModal(u)" class="text-blue-500 mr-2"><i class="fas fa-pen"></i></button><button @click="deleteUser(u.id)" class="text-red-400"><i class="fas fa-trash"></i></button></div>
-                                <div class="flex items-center gap-4"><div class="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl" :class="u.role==='admin'?'bg-slate-800':'bg-blue-600'">{{ u.name[0] }}</div><div><h3 class="font-bold text-lg">{{ u.name }}</h3><p class="text-xs font-bold uppercase text-slate-400">{{ u.role }}</p></div></div>
-                            </div>
-                        </template>
+                            <h3 class="font-bold text-sm text-slate-600 mb-2 leading-tight pr-6">{{ s.name }}</h3>
+                            <p class="text-xl md:text-2xl font-extrabold text-slate-800">{{ formatMoney(s.price) }}</p>
+                        </div>
                     </div>
                 </div>
                 </transition>
-                
-                 <transition name="fade" mode="out-in">
-                <div v-if="currentTab === 'expenses'" class="max-w-4xl mx-auto">
+
+                <transition name="fade" mode="out-in">
+                <div v-if="currentTab === 'users' && user.role === 'admin'" key="users" class="max-w-5xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-extrabold text-slate-800">Команда</h2>
+                        <button @click="openUserModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div v-for="u in usersList" :key="u.id" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 relative group flex items-center gap-4">
+                            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition" v-if="u.username !== 'admin'">
+                                <button @click="openUserModal(u)" class="text-blue-500 mr-1 p-1 hover:bg-blue-50 rounded"><i class="fas fa-pen text-xs"></i></button>
+                                <button @click="deleteUser(u.id)" class="text-red-400 p-1 hover:bg-red-50 rounded"><i class="fas fa-trash text-xs"></i></button>
+                            </div>
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg" :class="u.role==='admin'?'bg-slate-800':'bg-blue-600'">{{ u.name[0] }}</div>
+                            <div>
+                                <h3 class="font-bold text-base leading-tight">{{ u.name }}</h3>
+                                <p class="text-[10px] font-bold uppercase tracking-wider mt-1" :class="u.role==='admin'?'text-slate-400':'text-blue-500'">{{ u.role === 'admin' ? 'Владелец' : 'Мойщик' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </transition>
+
+                <transition name="fade" mode="out-in">
+                <div v-if="currentTab === 'expenses'" key="expenses" class="max-w-4xl mx-auto">
                      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
-                        <h3 class="font-bold mb-4">Новый расход</h3>
-                        <div class="flex gap-3"><input type="date" v-model="newExpense.date" class="bg-slate-50 border-0 rounded-xl p-3 w-40"><input v-model="newExpense.title" placeholder="Название" class="bg-slate-50 border-0 rounded-xl p-3 flex-1"><div class="flex gap-2"><input type="number" v-model.number="newExpense.amount" placeholder="Сумма" class="bg-slate-50 border-0 rounded-xl p-3 w-32"><button @click="addExpense" class="bg-red-500 text-white px-5 rounded-xl"><i class="fas fa-plus"></i></button></div></div>
+                        <h3 class="font-bold text-slate-800 mb-4">Новый расход</h3>
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <input type="date" v-model="newExpense.date" class="bg-slate-50 border-0 rounded-xl p-3 md:w-40 font-semibold">
+                            <input v-model="newExpense.title" placeholder="Название (Например: Шампунь)" class="bg-slate-50 border-0 rounded-xl p-3 flex-1 font-semibold outline-none focus:ring-2 focus:ring-blue-500">
+                            <div class="flex gap-2">
+                                <div class="relative w-32 md:w-40">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₽</span>
+                                    <input type="number" v-model.number="newExpense.amount" placeholder="0" class="w-full bg-slate-50 border-0 rounded-xl pl-8 pr-3 py-3 font-extrabold outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <button type="button" @click="addExpense" :disabled="!newExpense.amount" class="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-5 rounded-xl shadow-lg transition"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
                      </div>
-                     <div class="space-y-2"><div v-for="e in expenses" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between"><div><p class="font-bold">{{ e.title }}</p><p class="text-xs text-slate-400">{{ formatDate(e.date_only) }}</p></div><span class="font-bold text-red-500">-{{ formatMoney(e.amount) }}</span></div></div>
+                     <div class="space-y-2">
+                         <div v-for="e in expenses" :key="e.id" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
+                             <div class="flex items-center gap-3">
+                                 <div class="w-10 h-10 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center"><i class="fas fa-receipt"></i></div>
+                                 <div><p class="font-bold text-slate-800">{{ e.title }}</p><p class="text-xs text-slate-400 font-medium">{{ formatDate(e.date_only) }}</p></div>
+                             </div>
+                             <span class="font-extrabold text-red-500 text-lg">-{{ formatMoney(e.amount) }}</span>
+                         </div>
+                     </div>
                 </div>
                 </transition>
 
             </div>
-            
-            <nav class="md:hidden bg-white/90 backdrop-blur border-t border-slate-100 flex justify-around py-2 pb-safe shrink-0 shadow-lg z-50">
-                <button v-for="tab in tabs" :key="tab.id" v-show="canAccess(tab)" @click="currentTab = tab.id" class="flex flex-col items-center p-2 rounded-xl transition" :class="currentTab === tab.id ? 'text-blue-600 scale-110' : 'text-slate-400'">
-                    <i :class="tab.icon" class="text-xl mb-0.5"></i><span class="text-[10px] font-bold">{{ tab.shortLabel }}</span>
+
+            <nav class="md:hidden bg-white/90 backdrop-blur border-t border-slate-100 flex justify-around py-2 pb-safe shrink-0 z-50">
+                <button v-for="tab in tabs" :key="tab.id" v-show="canAccess(tab)" @click="currentTab = tab.id" 
+                        class="flex flex-col items-center p-2 rounded-xl transition duration-200" 
+                        :class="currentTab === tab.id ? 'text-blue-600 scale-110' : 'text-slate-400'">
+                    <i :class="tab.icon" class="text-xl mb-0.5"></i>
+                    <span class="text-[10px] font-bold">{{ tab.shortLabel }}</span>
                 </button>
             </nav>
         </main>
     </template>
 
-    <div v-if="showServiceModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"><div class="bg-white p-8 rounded-3xl w-full max-w-sm"><h3 class="font-bold text-xl mb-4">Услуга</h3><input v-model="editingService.name" placeholder="Название" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-2"><input v-model.number="editingService.price" placeholder="Цена" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-6"><div class="flex gap-3"><button @click="showServiceModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold">Отмена</button><button @click="saveService" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl font-bold">ОК</button></div></div></div>
-    
-    <div v-if="showUserModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"><div class="bg-white p-8 rounded-3xl w-full max-w-sm"><h3 class="font-bold text-xl mb-4">Сотрудник</h3><input v-model="editingUser.name" placeholder="Имя" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-2"><input v-model="editingUser.username" placeholder="Логин" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-2"><input v-model="editingUser.password" placeholder="Пароль" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-2"><select v-model="editingUser.role" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-6"><option value="worker">Мойщик</option><option value="admin">Админ</option></select><div class="flex gap-3"><button @click="showUserModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold">Отмена</button><button @click="saveUser" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl font-bold">ОК</button></div></div></div>
-    
-    <div v-if="showWashModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"><div class="bg-white p-8 rounded-3xl w-full max-w-sm border-t-8 border-blue-500"><h3 class="font-bold text-xl mb-4">Изменить</h3><input type="date" v-model="editingWash.date_only" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-2"><input v-model="editingWash.car_model" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-2"><input v-model="editingWash.description" class="w-full bg-slate-50 border-0 rounded-xl p-3 mb-2"><input v-model.number="editingWash.price" class="w-full bg-white border-2 border-slate-100 rounded-xl p-3 text-lg font-bold text-blue-600 mb-6"><div class="flex gap-3"><button @click="showWashModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold">Отмена</button><button @click="saveWash" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl font-bold">ОК</button></div></div></div>
+    <transition name="fade">
+    <div v-if="showWashModal" class="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl border-t-8 border-blue-500">
+            <h3 class="font-extrabold text-xl mb-6 text-slate-800">Редактировать запись</h3>
+            <div class="space-y-4">
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Дата</label><input type="date" v-model="editingWash.date_only" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div v-if="user.role === 'admin'">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Основной мойщик</label>
+                    <div class="relative"><select v-model="editingWash.user_id" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-bold text-slate-700 outline-none appearance-none"><option v-for="u in usersList" :key="u.id" :value="u.id">{{ u.name }}</option></select><div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><i class="fas fa-chevron-down text-xs"></i></div></div>
+                </div>
+                <div v-if="user.role === 'admin'">
+                    <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1 block pl-1">Напарник (Делят ЗП)</label>
+                    <div class="relative"><select v-model="editingWash.co_worker_id" class="w-full bg-indigo-50 border-0 rounded-xl p-3 font-bold text-indigo-700 outline-none appearance-none"><option :value="null">Без напарника</option><option v-for="u in usersList.filter(u=>u.id!==editingWash.user_id)" :key="u.id" :value="u.id">{{ u.name }}</option></select><div class="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none"><i class="fas fa-chevron-down text-xs"></i></div></div>
+                </div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Марка авто</label><input v-model="editingWash.car_model" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Услуга</label><input v-model="editingWash.description" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Сумма (₽)</label><input type="number" v-model.number="editingWash.price" class="w-full bg-white border-2 border-slate-100 rounded-xl p-3 text-xl font-extrabold text-blue-600 outline-none focus:border-blue-500"></div>
+            </div>
+            <div class="mt-8 flex gap-3"><button @click="showWashModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition">Отмена</button><button @click="saveWash" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg transition">Сохранить</button></div>
+        </div>
+    </div>
+    </transition>
+
+    <transition name="fade">
+    <div v-if="showServiceModal" class="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl border-t-8 border-blue-500">
+            <h3 class="font-extrabold text-xl mb-6 text-slate-800">{{ editingService.id ? 'Редактировать услугу' : 'Новая услуга' }}</h3>
+            <div class="space-y-4">
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Название услуги</label><input v-model="editingService.name" placeholder="Например: Кузов" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Цена (₽)</label><input type="number" v-model.number="editingService.price" placeholder="0" class="w-full bg-white border-2 border-slate-100 rounded-xl p-3 text-xl font-extrabold text-blue-600 outline-none focus:border-blue-500"></div>
+            </div>
+            <div class="mt-8 flex gap-3"><button @click="showServiceModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition">Отмена</button><button @click="saveService" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg transition">Сохранить</button></div>
+        </div>
+    </div>
+    </transition>
+
+    <transition name="fade">
+    <div v-if="showUserModal" class="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl border-t-8 border-blue-500">
+            <h3 class="font-extrabold text-xl mb-6 text-slate-800">{{ editingUser.id ? 'Редактировать сотрудника' : 'Новый сотрудник' }}</h3>
+            <div class="space-y-4">
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Имя (отображается в системе)</label><input v-model="editingUser.name" placeholder="Иван" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Логин для входа</label><input v-model="editingUser.username" placeholder="ivan" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Роль в системе</label>
+                    <div class="relative">
+                        <select v-model="editingUser.role" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-bold text-slate-700 outline-none appearance-none">
+                            <option value="worker">Мойщик</option>
+                            <option value="admin">Владелец (Админ)</option>
+                        </select>
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>
+                    </div>
+                </div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Пароль <span v-if="editingUser.id" class="text-slate-400 normal-case">(оставьте пустым, если не меняете)</span></label><input v-model="editingUser.password" type="password" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+            </div>
+            <div class="mt-8 flex gap-3"><button @click="showUserModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition">Отмена</button><button @click="saveUser" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg transition">Сохранить</button></div>
+        </div>
+    </div>
+    </transition>
 
 </div>
 
@@ -315,45 +465,53 @@
 
     createApp({
         setup() {
+            // === Core ===
             const user = ref(null);
             const loginForm = ref({ username: '', password: '' });
             const loginError = ref('');
             const tabs = [
                 { id: 'home', label: 'Главная', shortLabel: 'Главная', icon: 'fas fa-home', role: 'all' },
                 { id: 'reports', label: 'Отчеты', shortLabel: 'Отчеты', icon: 'fas fa-chart-pie', role: 'all' },
-                { id: 'services', label: 'Услуги', shortLabel: 'Услуги', icon: 'fas fa-list', role: 'admin' },
+                { id: 'services', label: 'Прайс', shortLabel: 'Прайс', icon: 'fas fa-list', role: 'admin' },
                 { id: 'expenses', label: 'Расходы', shortLabel: 'Расходы', icon: 'fas fa-receipt', role: 'admin' },
-                { id: 'users', label: 'Сотрудники', shortLabel: 'Команда', icon: 'fas fa-users', role: 'admin' }
+                { id: 'users', label: 'Команда', shortLabel: 'Команда', icon: 'fas fa-users', role: 'admin' }
             ];
             const currentTab = ref(localStorage.getItem('cw_tab') || 'home');
             const canAccess = (tab) => tab.role === 'all' || (user.value && user.value.role === 'admin');
 
+            // === Data & Dates ===
             const today = new Date().toISOString().split('T')[0];
             const homeDate = ref(today);
             const reportDates = ref(JSON.parse(localStorage.getItem('cw_dates') || JSON.stringify({start: today, end: today})));
             const reportFilterId = ref(0);
+            
+            const washes = ref([]); const expenses = ref([]); const usersList = ref([]); const servicesList = ref([]);
+            
+            // === Forms ===
+            const newEntry = ref({ date: today, price: '', carModel: '', description: '', selectedWorkerId: null, coWorkerId: null });
+            
+            const selectedServices = ref([]);
+            const selectedService = ref(null); 
+            const customServiceMode = ref(false);
+            const customServiceText = ref('');
 
-            const washes = ref([]);
-            const expenses = ref([]);
-            const usersList = ref([]);
-            const servicesList = ref([]);
+            const newExpense = ref({ date: today, title: '', amount: '' });
+            
+            // Profile Form
+            const showProfileModal = ref(false);
+            const profileForm = ref({ username: '', password: '', name: '' });
+
+            // UI
             const toasts = ref([]);
             const confirmState = ref({ show: false, message: '', action: () => {} });
-            
-            const newEntry = ref({ date: today, price: '', carModel: '', description: '', selectedWorkerId: null });
-            const selectedService = ref(null);
-            const newExpense = ref({ date: today, title: '', amount: '' });
-
             const showServiceModal = ref(false); const editingService = ref({});
             const showUserModal = ref(false); const editingUser = ref({});
             const showWashModal = ref(false); const editingWash = ref({});
 
-            const showToast = (title, msg, type = 'success') => {
-                const id = Date.now(); toasts.value.push({ id, title, msg, type });
-                setTimeout(() => toasts.value = toasts.value.filter(t => t.id !== id), 3000);
-            };
+            // === API & Loaders ===
+            const showToast = (title, msg, type = 'success') => { const id = Date.now(); toasts.value.push({ id, title, msg, type }); setTimeout(() => toasts.value = toasts.value.filter(t => t.id !== id), 3000); };
             const confirmAction = (msg, action) => { confirmState.value = { show: true, message: msg, action: () => { action(); confirmState.value.show = false; } }; };
-            const api = async (act, data={}) => { try { const r = await fetch(`${API_URL}?action=${act}`, {method:'POST', body:JSON.stringify(data)}); return await r.json(); } catch(e) { showToast('Ошибка', 'Нет связи', 'error'); return {success:false}; } };
+            const api = async (action, data = {}) => { try { const res = await fetch(`${API_URL}?action=${action}`, { method: 'POST', body: JSON.stringify(data) }); return await res.json(); } catch(e) { showToast('Ошибка сети', 'Нет связи', 'error'); return { success: false }; } };
 
             const loadData = async () => {
                 let start = currentTab.value === 'home' ? homeDate.value : reportDates.value.start;
@@ -361,59 +519,141 @@
                 const res = await api('get_report', { start, end, user_id: user.value.id, role: user.value.role, filter_id: reportFilterId.value });
                 washes.value = res.washes || []; expenses.value = res.expenses || [];
             };
-            const loadAux = async () => { if(user.value.role === 'admin') usersList.value = await api('get_users') || []; servicesList.value = await api('get_services') || []; };
 
-            const login = async () => { const res = await api('login', loginForm.value); if(res.success) { user.value = res.user; localStorage.setItem('cw_user', JSON.stringify(user.value)); loadAux(); loadData(); } else loginError.value = "Ошибка"; };
-            const logout = () => { user.value = null; localStorage.removeItem('cw_user'); };
-
-            const onServiceChange = () => { if(selectedService.value && selectedService.value !== 'custom') { newEntry.value.description = selectedService.value.name; newEntry.value.price = selectedService.value.price; } else if(selectedService.value === 'custom') { newEntry.value.description = ''; newEntry.value.price = ''; } };
-            
-            const addWash = async () => { await api('add_wash', { ...newEntry.value, user_id: newEntry.value.selectedWorkerId || user.value.id }); newEntry.value.price = ''; newEntry.value.carModel = ''; selectedService.value = null; showToast('OK', 'Добавлено'); loadData(); };
-            const saveWash = async () => { await api('edit_wash', { ...editingWash.value, date: editingWash.value.date_only }); showWashModal.value = false; loadData(); };
-            const deleteWash = (id) => confirmAction('Удалить?', async () => { await api('delete_wash', { id }); loadData(); });
-
-            const saveService = async () => { await api('save_service', { id: editingService.value.id, service_name: editingService.value.name, service_price: editingService.value.price }); showServiceModal.value = false; loadAux(); };
-            const deleteService = (id) => confirmAction('Удалить?', async () => { await api('delete_service', { id }); loadAux(); });
-            const saveUser = async () => { await api('save_user', editingUser.value); showUserModal.value = false; loadAux(); };
-            const deleteUser = (id) => confirmAction('Удалить?', async () => { await api('delete_user', { id }); loadAux(); });
-            const addExpense = async () => { if(!newExpense.value.amount) return; await api('add_expense', newExpense.value); newExpense.value.amount = ''; showToast('OK', 'Расход добавлен'); loadData(); };
-
-            // === NEW LOGIC: DATE ARROWS & WORKER FILTER ===
-            const changeDay = (offset) => {
-                const d = new Date(homeDate.value);
-                d.setDate(d.getDate() + offset);
-                homeDate.value = d.toISOString().split('T')[0];
+            const loadAux = async () => {
+                usersList.value = await api('get_users') || [];
+                servicesList.value = await api('get_services') || [];
             };
 
-            const fancyDateLabel = computed(() => {
-                if(homeDate.value === today) return 'Сегодня';
-                const d = new Date(homeDate.value);
-                d.setDate(d.getDate() - 1); // fix timezone glitch visually
-                // Simple check if yesterday
-                const y = new Date(); y.setDate(y.getDate() - 1);
-                if(homeDate.value === y.toISOString().split('T')[0]) return 'Вчера';
-                return homeDate.value.split('-').reverse().join('.');
-            });
+            // === Actions ===
+            const login = async () => {
+                const res = await api('login', loginForm.value);
+                if(res.success) { user.value = res.user; localStorage.setItem('cw_user', JSON.stringify(user.value)); loadAux(); loadData(); showToast('Успешно', `Привет, ${user.value.name}`); } 
+                else loginError.value = "Неверный логин или пароль";
+            };
+            const logout = () => { user.value = null; localStorage.removeItem('cw_user'); };
+            
+            // Profile Actions
+            const openProfileModal = () => {
+                profileForm.value = { id: user.value.id, username: user.value.username, password: '', name: user.value.name };
+                showProfileModal.value = true;
+            };
+            const saveProfile = async () => {
+                const res = await api('update_profile', profileForm.value);
+                if(res.success) {
+                    user.value.username = profileForm.value.username;
+                    localStorage.setItem('cw_user', JSON.stringify(user.value));
+                    showProfileModal.value = false;
+                    showToast('Готово', 'Профиль обновлен');
+                }
+            };
 
-            // Filter workers: Show only role='worker' + Current User (if admin wants to select self)
-            const selectableWorkers = computed(() => {
-                return usersList.value.filter(u => u.role === 'worker' || u.id === user.value.id);
-            });
+            // Dates
+            const changeDay = (offset) => { const d = new Date(homeDate.value); d.setDate(d.getDate() + offset); homeDate.value = d.toISOString().split('T')[0]; };
+
+            // Multi Service Logic
+            const updateDescription = () => {
+                let parts = selectedServices.value.map(s => s.name);
+                if (customServiceMode.value && customServiceText.value) parts.push(customServiceText.value);
+                newEntry.value.description = parts.join(' + ');
+            };
+            
+            const toggleService = (s) => {
+                const idx = selectedServices.value.findIndex(x => x.id === s.id);
+                if (idx > -1) selectedServices.value.splice(idx, 1);
+                else selectedServices.value.push(s);
+                newEntry.value.price = selectedServices.value.reduce((sum, item) => sum + item.price, 0);
+                updateDescription();
+            };
+
+            const toggleCustomService = () => {
+                customServiceMode.value = !customServiceMode.value;
+                if(!customServiceMode.value) customServiceText.value = '';
+                updateDescription();
+            };
+            
+            const onServiceChange = () => { if(selectedService.value === 'custom') { toggleCustomService(); selectedService.value = null; } };
+
+            const addWash = async () => {
+                if(!newEntry.value.price || !newEntry.value.description) return;
+                const payload = {
+                    user_id: newEntry.value.selectedWorkerId || user.value.id,
+                    co_worker_id: newEntry.value.coWorkerId || null,
+                    date: newEntry.value.date,
+                    car_model: newEntry.value.carModel,
+                    description: newEntry.value.description,
+                    price: newEntry.value.price
+                };
+                await api('add_wash', payload);
+                newEntry.value.price = ''; newEntry.value.carModel = ''; newEntry.value.description = ''; 
+                newEntry.value.coWorkerId = null;
+                selectedServices.value = []; customServiceMode.value = false; customServiceText.value = '';
+                showToast('Сохранено', 'Машина добавлена'); loadData();
+            };
+
+            const saveWash = async () => { await api('edit_wash', { ...editingWash.value, date: editingWash.value.date_only }); showWashModal.value = false; showToast('Обновлено', 'Запись изменена'); loadData(); };
+            const deleteWash = (id) => confirmAction('Удалить эту запись безвозвратно?', async () => { await api('delete_wash', { id }); loadData(); });
+            const saveService = async () => { await api('save_service', { id: editingService.value.id, service_name: editingService.value.name, service_price: editingService.value.price }); showServiceModal.value = false; loadAux(); };
+            const deleteService = (id) => confirmAction('Архивировать эту услугу?', async () => { await api('delete_service', { id }); loadAux(); });
+            const saveUser = async () => { await api('save_user', editingUser.value); showUserModal.value = false; loadAux(); };
+            const deleteUser = (id) => confirmAction('Архивировать сотрудника?', async () => { await api('delete_user', { id }); loadAux(); });
+            
+            // Исправленное добавление расхода (надежные значения по умолчанию)
+            const addExpense = async () => { 
+                if(!newExpense.value.amount) return; 
+                await api('add_expense', { 
+                    date: newExpense.value.date || today, 
+                    title: newExpense.value.title || 'Прочий расход', 
+                    amount: Number(newExpense.value.amount) 
+                }); 
+                newExpense.value.amount = ''; 
+                newExpense.value.title = ''; 
+                showToast('Расход', 'Записано'); 
+                loadData(); 
+            };
+
+            // === Computed ===
+            const selectableWorkers = computed(() => usersList.value.filter(u => u.role === 'worker' || u.id === user.value.id));
+            const fancyDateLabel = computed(() => { if(homeDate.value === today) return 'Сегодня'; const y = new Date(); y.setDate(y.getDate() - 1); if(homeDate.value === y.toISOString().split('T')[0]) return 'Вчера'; return homeDate.value.split('-').reverse().join('.'); });
 
             const stats = computed(() => {
                 const rev = washes.value.reduce((a, b) => a + b.price, 0);
                 const exp = expenses.value.reduce((a, b) => a + b.amount, 0);
-                const breakdown = {}; washes.value.forEach(w => breakdown[w.worker_name || 'X'] = (breakdown[w.worker_name || 'X'] || 0) + w.price);
-                return { totalRevenue: rev, totalExpenses: exp, netProfit: (rev/2) - exp, myEarnings: rev/2, workerBreakdown: breakdown };
+                const breakdown = {};
+                washes.value.forEach(w => {
+                    const pricePerWorker = w.co_worker_name ? w.price / 2 : w.price;
+                    
+                    breakdown[w.worker_name] = (breakdown[w.worker_name] || 0) + (pricePerWorker / 2);
+                    if (w.co_worker_name) {
+                        breakdown[w.co_worker_name] = (breakdown[w.co_worker_name] || 0) + (pricePerWorker / 2);
+                    }
+                });
+                
+                let workerEarnings = 0;
+                if (user.value) {
+                     workerEarnings = washes.value.reduce((sum, w) => {
+                        if (w.user_id === user.value.id || w.co_worker_id === user.value.id) {
+                            return sum + (w.co_worker_name ? w.price / 4 : w.price / 2);
+                        }
+                        return sum;
+                    }, 0);
+                }
+
+                return { 
+                    totalRevenue: rev, 
+                    totalExpenses: exp, 
+                    netProfit: (rev/2) - exp, 
+                    myEarnings: user.value && user.value.role === 'admin' ? (rev/2) : workerEarnings, 
+                    workerBreakdown: breakdown 
+                };
             });
-            const dateLabel = computed(() => currentTab.value==='home' ? fancyDateLabel.value : `${reportDates.value.start}/${reportDates.value.end}`);
+            
             const formatMoney = (v) => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(v);
             const formatDate = (v) => v ? new Date(v).toLocaleDateString('ru-RU') : '';
 
-            // Openers
             const openServiceModal = (s=null) => { editingService.value = s ? {...s} : {}; showServiceModal.value = true; };
             const openUserModal = (u=null) => { editingUser.value = u ? {...u, password:''} : {role:'worker'}; showUserModal.value = true; };
-            const openWashModal = (w) => { editingWash.value = {...w, date_only: w.date_only}; showWashModal.value = true; };
+            const openWashModal = (w) => { editingWash.value = {id: w.id, user_id: w.user_id, co_worker_id: w.co_worker_id, date_only: w.date_only, car_model: w.car_model, description: w.description, price: w.price}; showWashModal.value = true; };
 
             onMounted(() => { const u = localStorage.getItem('cw_user'); if(u) { user.value = JSON.parse(u); loadAux(); loadData(); } });
             watch(currentTab, (v) => { localStorage.setItem('cw_tab', v); loadData(); });
@@ -423,13 +663,14 @@
             return { 
                 user, loginForm, loginError, login, logout, currentTab, tabs, canAccess,
                 washes, expenses, usersList, servicesList, newEntry, newExpense, selectedService,
-                homeDate, reportDates, reportFilterId, dateLabel, stats, formatMoney, formatDate,
+                homeDate, reportDates, reportFilterId, stats, formatMoney, formatDate,
                 showServiceModal, editingService, openServiceModal, saveService, deleteService,
                 showUserModal, editingUser, openUserModal, saveUser, deleteUser,
                 showWashModal, editingWash, openWashModal, saveWash, deleteWash,
+                showProfileModal, profileForm, openProfileModal, saveProfile,
                 addWash, addExpense, onServiceChange, toasts, confirmState,
-                // NEW
-                changeDay, fancyDateLabel, selectableWorkers
+                changeDay, fancyDateLabel, selectableWorkers,
+                selectedServices, toggleService, customServiceMode, customServiceText, toggleCustomService, updateDescription
             };
         }
     }).mount('#app');
