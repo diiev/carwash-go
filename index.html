@@ -16,7 +16,7 @@
     <style>
         body { background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
         .custom-scroll::-webkit-scrollbar { width: 0px; height: 0px; }
-        .custom-scroll { scrollbar-width: none; } /* Firefox */
+        .custom-scroll { scrollbar-width: none; }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
@@ -146,7 +146,7 @@
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Дата</label>
-                                        <div class="relative"><input type="date" v-model="newEntry.date" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer"><div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><i class="fas fa-calendar-day"></i></div></div>
+                                        <div class="relative"><input type="date" v-model="newEntry.date" @change="$event.target.blur()" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer"><div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><i class="fas fa-calendar-day"></i></div></div>
                                     </div>
                                     <div>
                                         <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block pl-1">Марка авто</label>
@@ -218,7 +218,7 @@
                             <button @click="changeDay(-1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-left"></i></button>
                             <div class="relative px-3 min-w-[100px] text-center">
                                 <span class="text-sm font-bold text-slate-700 block">{{ fancyDateLabel }}</span>
-                                <input type="date" v-model="homeDate" class="absolute inset-0 opacity-0 cursor-pointer">
+                                <input type="date" v-model="homeDate" @change="$event.target.blur()" class="absolute inset-0 opacity-0 cursor-pointer">
                             </div>
                             <button @click="changeDay(1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-right"></i></button>
                         </div>
@@ -265,8 +265,8 @@
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
                         <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-filter text-blue-500"></i> Фильтр по датам</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Начало</label><input type="date" v-model="reportDates.start" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
-                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Конец</label><input type="date" v-model="reportDates.end" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
+                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Начало</label><input type="date" v-model="reportDates.start" @change="$event.target.blur()" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
+                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Конец</label><input type="date" v-model="reportDates.end" @change="$event.target.blur()" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
                             <div class="relative" v-if="user.role === 'admin'">
                                 <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Сотрудник</label>
                                 <select v-model="reportFilterId" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-bold text-slate-600 appearance-none">
@@ -363,8 +363,8 @@
                      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
                         <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-filter text-blue-500"></i> Фильтр периодов</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Начало</label><input type="date" v-model="expenseDates.start" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
-                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Конец</label><input type="date" v-model="expenseDates.end" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
+                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Начало</label><input type="date" v-model="expenseDates.start" @change="$event.target.blur()" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
+                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Конец</label><input type="date" v-model="expenseDates.end" @change="$event.target.blur()" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
                             <button type="button" @click="loadData" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-slate-700 transition">Показать период</button>
                         </div>
                      </div>
@@ -372,7 +372,7 @@
                      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
                         <h3 class="font-bold text-slate-800 mb-4">Новый расход</h3>
                         <div class="flex flex-col md:flex-row gap-3">
-                            <input type="date" v-model="newExpense.date" class="bg-slate-50 border-0 rounded-xl p-3 md:w-40 font-semibold">
+                            <input type="date" v-model="newExpense.date" @change="$event.target.blur()" class="bg-slate-50 border-0 rounded-xl p-3 md:w-40 font-semibold">
                             <input v-model="newExpense.title" placeholder="Название (Например: Шампунь)" class="bg-slate-50 border-0 rounded-xl p-3 flex-1 font-semibold outline-none focus:ring-2 focus:ring-blue-500">
                             <div class="flex gap-2">
                                 <div class="relative w-32 md:w-40">
@@ -400,12 +400,20 @@
                              <i class="fas fa-receipt text-4xl mb-2 opacity-50"></i><p class="text-sm font-medium">За этот период расходов нет</p>
                          </div>
                          <transition-group name="slide-up">
-                         <div v-for="e in expenses" :key="e.id" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
+                         <div v-for="e in expenses" :key="e.id" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center group">
                              <div class="flex items-center gap-3">
                                  <div class="w-10 h-10 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center"><i class="fas fa-receipt"></i></div>
                                  <div><p class="font-bold text-slate-800">{{ e.title }}</p><p class="text-xs text-slate-400 font-medium">{{ formatDate(e.date_only) }}</p></div>
                              </div>
-                             <span class="font-extrabold text-red-500 text-lg">-{{ formatMoney(e.amount) }}</span>
+                             
+                             <div class="flex items-center gap-3">
+                                <span class="font-extrabold text-red-500 text-lg">-{{ formatMoney(e.amount) }}</span>
+                                <div class="flex gap-1 border-l border-slate-100 pl-3">
+                                    <button @click="openExpenseEditModal(e)" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-pen text-xs"></i></button>
+                                    <button @click="deleteExpense(e.id)" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-red-500 transition"><i class="fas fa-trash text-xs"></i></button>
+                                </div>
+                             </div>
+
                          </div>
                          </transition-group>
                      </div>
@@ -430,7 +438,7 @@
         <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl border-t-8 border-blue-500">
             <h3 class="font-extrabold text-xl mb-6 text-slate-800">Редактировать запись</h3>
             <div class="space-y-4">
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Дата</label><input type="date" v-model="editingWash.date_only" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Дата</label><input type="date" v-model="editingWash.date_only" @change="$event.target.blur()" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
                 <div v-if="user.role === 'admin'">
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Основной мойщик</label>
                     <div class="relative"><select v-model="editingWash.user_id" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-bold text-slate-700 outline-none appearance-none"><option v-for="u in usersList" :key="u.id" :value="u.id">{{ u.name }}</option></select><div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><i class="fas fa-chevron-down text-xs"></i></div></div>
@@ -466,9 +474,9 @@
         <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl border-t-8 border-blue-500">
             <h3 class="font-extrabold text-xl mb-6 text-slate-800">{{ editingUser.id ? 'Редактировать сотрудника' : 'Новый сотрудник' }}</h3>
             <div class="space-y-4">
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Имя (отображается в системе)</label><input v-model="editingUser.name" placeholder="Иван" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Логин для входа</label><input v-model="editingUser.username" placeholder="ivan" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Роль в системе</label>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Имя</label><input v-model="editingUser.name" placeholder="Иван" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Логин</label><input v-model="editingUser.username" placeholder="ivan" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Роль</label>
                     <div class="relative">
                         <select v-model="editingUser.role" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-bold text-slate-700 outline-none appearance-none">
                             <option value="worker">Мойщик</option>
@@ -480,6 +488,20 @@
                 <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Пароль <span v-if="editingUser.id" class="text-slate-400 normal-case">(оставьте пустым, если не меняете)</span></label><input v-model="editingUser.password" type="password" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
             </div>
             <div class="mt-8 flex gap-3"><button @click="showUserModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition">Отмена</button><button @click="saveUser" class="w-1/2 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg transition">Сохранить</button></div>
+        </div>
+    </div>
+    </transition>
+
+    <transition name="fade">
+    <div v-if="showExpenseEditModal" class="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl border-t-8 border-red-500">
+            <h3 class="font-extrabold text-xl mb-6 text-slate-800">Редактировать расход</h3>
+            <div class="space-y-4">
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Дата</label><input type="date" v-model="editingExpense.date_only" @change="$event.target.blur()" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-red-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Название</label><input v-model="editingExpense.title" class="w-full bg-slate-50 border-0 rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-red-500"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block pl-1">Сумма (₽)</label><input type="number" v-model.number="editingExpense.amount" class="w-full bg-white border-2 border-slate-100 rounded-xl p-3 text-xl font-extrabold text-red-500 outline-none focus:border-red-500"></div>
+            </div>
+            <div class="mt-8 flex gap-3"><button @click="showExpenseEditModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition">Отмена</button><button @click="saveExpenseEdit" class="w-1/2 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 shadow-lg transition">Сохранить</button></div>
         </div>
     </div>
     </transition>
@@ -535,6 +557,7 @@
             const showServiceModal = ref(false); const editingService = ref({});
             const showUserModal = ref(false); const editingUser = ref({});
             const showWashModal = ref(false); const editingWash = ref({});
+            const showExpenseEditModal = ref(false); const editingExpense = ref({}); // НОВЫЕ ПЕРЕМЕННЫЕ
 
             // === API & Loaders ===
             const showToast = (title, msg, type = 'success') => { const id = Date.now(); toasts.value.push({ id, title, msg, type }); setTimeout(() => toasts.value = toasts.value.filter(t => t.id !== id), 3000); };
@@ -589,7 +612,6 @@
             // Dates Navigation
             const changeDay = (offset) => { const d = new Date(homeDate.value); d.setDate(d.getDate() + offset); homeDate.value = d.toISOString().split('T')[0]; };
             
-            // Для расходов: если нажимают стрелочки, сбрасываем в "один день" и переключаем
             const changeExpenseDay = (offset) => { 
                 const d = new Date(expenseDates.value.start); 
                 d.setDate(d.getDate() + offset); 
@@ -659,11 +681,36 @@
                 loadData(); 
             };
 
+            // НОВЫЕ МЕТОДЫ РАСХОДОВ (Редактирование и Удаление)
+            const openExpenseEditModal = (e) => {
+                editingExpense.value = { ...e };
+                showExpenseEditModal.value = true;
+            };
+
+            const saveExpenseEdit = async () => {
+                if(!editingExpense.value.amount || !editingExpense.value.title) return;
+                await api('edit_expense', {
+                    id: editingExpense.value.id,
+                    title: editingExpense.value.title,
+                    amount: Number(editingExpense.value.amount),
+                    date: editingExpense.value.date_only
+                });
+                showExpenseEditModal.value = false;
+                showToast('Обновлено', 'Расход изменен');
+                loadData();
+            };
+
+            const deleteExpense = (id) => {
+                confirmAction('Удалить этот расход?', async () => {
+                    await api('delete_expense', { id });
+                    loadData();
+                });
+            };
+
             // === Computed ===
             const selectableWorkers = computed(() => usersList.value.filter(u => u.role === 'worker' || u.id === user.value.id));
             const fancyDateLabel = computed(() => { if(homeDate.value === today) return 'Сегодня'; const y = new Date(); y.setDate(y.getDate() - 1); if(homeDate.value === y.toISOString().split('T')[0]) return 'Вчера'; return homeDate.value.split('-').reverse().join('.'); });
             
-            // Если выбран период (разные даты), пишем "Период", иначе показываем конкретный день
             const fancyExpenseDateLabel = computed(() => { 
                 if(expenseDates.value.start !== expenseDates.value.end) return 'Период';
                 if(expenseDates.value.start === today) return 'Сегодня'; 
@@ -728,6 +775,7 @@
                 showUserModal, editingUser, openUserModal, saveUser, deleteUser,
                 showWashModal, editingWash, openWashModal, saveWash, deleteWash,
                 showProfileModal, profileForm, openProfileModal, saveProfile,
+                showExpenseEditModal, editingExpense, openExpenseEditModal, saveExpenseEdit, deleteExpense, // Экспорт новых функций
                 addWash, addExpense, onServiceChange, toasts, confirmState,
                 changeDay, changeExpenseDay, fancyDateLabel, fancyExpenseDateLabel, selectableWorkers,
                 selectedServices, toggleService, customServiceMode, customServiceText, toggleCustomService, updateDescription

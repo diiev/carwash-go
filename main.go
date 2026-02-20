@@ -216,6 +216,13 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		_, err := db.Exec("INSERT INTO expenses (title, amount, date_only) VALUES (?, ?, ?)", p.Title, p.Amount, p.Date)
 		send(w, err)
 
+	case "edit_expense":
+		_, err := db.Exec("UPDATE expenses SET title=?, amount=?, date_only=? WHERE id=?", p.Title, p.Amount, p.Date, p.ID)
+		send(w, err)
+	case "delete_expense":
+		_, err := db.Exec("DELETE FROM expenses WHERE id=?", p.ID)
+		send(w, err)
+
 	case "get_report":
 		res := make(map[string]interface{})
 		var washes []Wash
