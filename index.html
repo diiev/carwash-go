@@ -213,7 +213,7 @@
                     </div>
 
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-slate-700 text-lg">Лента</h3>
+                        <h3 class="font-bold text-slate-700 text-lg">Лента моек</h3>
                         <div class="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1">
                             <button @click="changeDay(-1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-left"></i></button>
                             <div class="relative px-3 min-w-[100px] text-center">
@@ -263,7 +263,7 @@
                 <transition name="fade" mode="out-in">
                 <div v-if="currentTab === 'reports'" key="reports" class="max-w-5xl mx-auto">
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
-                        <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-filter text-blue-500"></i> Фильтры</h3>
+                        <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-filter text-blue-500"></i> Фильтр по датам</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Начало</label><input type="date" v-model="reportDates.start" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
                             <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Конец</label><input type="date" v-model="reportDates.end" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
@@ -275,7 +275,7 @@
                                 </select>
                                 <div class="absolute right-3 top-1/2 translate-y-1 pointer-events-none text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>
                             </div>
-                            <button @click="fetchData" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-slate-700 transition">Применить</button>
+                            <button @click="loadData" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-slate-700 transition">Применить</button>
                         </div>
                     </div>
                     
@@ -359,6 +359,16 @@
 
                 <transition name="fade" mode="out-in">
                 <div v-if="currentTab === 'expenses'" key="expenses" class="max-w-4xl mx-auto">
+
+                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
+                        <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-filter text-blue-500"></i> Фильтр периодов</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Начало</label><input type="date" v-model="expenseDates.start" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
+                            <div class="relative"><label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Конец</label><input type="date" v-model="expenseDates.end" class="w-full bg-slate-50 border-0 rounded-xl p-3 text-sm font-semibold"></div>
+                            <button type="button" @click="loadData" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-slate-700 transition">Показать период</button>
+                        </div>
+                     </div>
+
                      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
                         <h3 class="font-bold text-slate-800 mb-4">Новый расход</h3>
                         <div class="flex flex-col md:flex-row gap-3">
@@ -373,7 +383,23 @@
                             </div>
                         </div>
                      </div>
+
+                     <div class="flex items-center justify-between mb-4 mt-8">
+                        <h3 class="font-bold text-slate-700 text-lg">Лента <span class="text-sm bg-red-100 text-red-600 px-2 py-1 rounded-lg ml-2 font-bold whitespace-nowrap">Итого: {{ formatMoney(expensesTotal) }}</span></h3>
+                        <div class="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1">
+                            <button @click="changeExpenseDay(-1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-left"></i></button>
+                            <div class="relative px-3 min-w-[100px] text-center">
+                                <span class="text-sm font-bold text-slate-700 block">{{ fancyExpenseDateLabel }}</span>
+                            </div>
+                            <button @click="changeExpenseDay(1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                     </div>
+
                      <div class="space-y-2">
+                         <div v-if="expenses.length === 0" class="text-center py-10 text-slate-300 bg-white rounded-3xl border border-dashed border-slate-200">
+                             <i class="fas fa-receipt text-4xl mb-2 opacity-50"></i><p class="text-sm font-medium">За этот период расходов нет</p>
+                         </div>
+                         <transition-group name="slide-up">
                          <div v-for="e in expenses" :key="e.id" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
                              <div class="flex items-center gap-3">
                                  <div class="w-10 h-10 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center"><i class="fas fa-receipt"></i></div>
@@ -381,6 +407,7 @@
                              </div>
                              <span class="font-extrabold text-red-500 text-lg">-{{ formatMoney(e.amount) }}</span>
                          </div>
+                         </transition-group>
                      </div>
                 </div>
                 </transition>
@@ -482,6 +509,7 @@
             // === Data & Dates ===
             const today = new Date().toISOString().split('T')[0];
             const homeDate = ref(today);
+            const expenseDates = ref(JSON.parse(localStorage.getItem('cw_exp_dates') || JSON.stringify({start: today, end: today})));
             const reportDates = ref(JSON.parse(localStorage.getItem('cw_dates') || JSON.stringify({start: today, end: today})));
             const reportFilterId = ref(0);
             
@@ -514,8 +542,18 @@
             const api = async (action, data = {}) => { try { const res = await fetch(`${API_URL}?action=${action}`, { method: 'POST', body: JSON.stringify(data) }); return await res.json(); } catch(e) { showToast('Ошибка сети', 'Нет связи', 'error'); return { success: false }; } };
 
             const loadData = async () => {
-                let start = currentTab.value === 'home' ? homeDate.value : reportDates.value.start;
-                let end = currentTab.value === 'home' ? homeDate.value : reportDates.value.end;
+                let start, end;
+                if (currentTab.value === 'home') {
+                    start = homeDate.value;
+                    end = homeDate.value;
+                } else if (currentTab.value === 'expenses') {
+                    start = expenseDates.value.start;
+                    end = expenseDates.value.end;
+                } else {
+                    start = reportDates.value.start;
+                    end = reportDates.value.end;
+                }
+                
                 const res = await api('get_report', { start, end, user_id: user.value.id, role: user.value.role, filter_id: reportFilterId.value });
                 washes.value = res.washes || []; expenses.value = res.expenses || [];
             };
@@ -548,8 +586,18 @@
                 }
             };
 
-            // Dates
+            // Dates Navigation
             const changeDay = (offset) => { const d = new Date(homeDate.value); d.setDate(d.getDate() + offset); homeDate.value = d.toISOString().split('T')[0]; };
+            
+            // Для расходов: если нажимают стрелочки, сбрасываем в "один день" и переключаем
+            const changeExpenseDay = (offset) => { 
+                const d = new Date(expenseDates.value.start); 
+                d.setDate(d.getDate() + offset); 
+                const newDateStr = d.toISOString().split('T')[0];
+                expenseDates.value.start = newDateStr;
+                expenseDates.value.end = newDateStr;
+                loadData(); 
+            };
 
             // Multi Service Logic
             const updateDescription = () => {
@@ -598,7 +646,6 @@
             const saveUser = async () => { await api('save_user', editingUser.value); showUserModal.value = false; loadAux(); };
             const deleteUser = (id) => confirmAction('Архивировать сотрудника?', async () => { await api('delete_user', { id }); loadAux(); });
             
-            // Исправленное добавление расхода (надежные значения по умолчанию)
             const addExpense = async () => { 
                 if(!newExpense.value.amount) return; 
                 await api('add_expense', { 
@@ -615,6 +662,17 @@
             // === Computed ===
             const selectableWorkers = computed(() => usersList.value.filter(u => u.role === 'worker' || u.id === user.value.id));
             const fancyDateLabel = computed(() => { if(homeDate.value === today) return 'Сегодня'; const y = new Date(); y.setDate(y.getDate() - 1); if(homeDate.value === y.toISOString().split('T')[0]) return 'Вчера'; return homeDate.value.split('-').reverse().join('.'); });
+            
+            // Если выбран период (разные даты), пишем "Период", иначе показываем конкретный день
+            const fancyExpenseDateLabel = computed(() => { 
+                if(expenseDates.value.start !== expenseDates.value.end) return 'Период';
+                if(expenseDates.value.start === today) return 'Сегодня'; 
+                const y = new Date(); y.setDate(y.getDate() - 1); 
+                if(expenseDates.value.start === y.toISOString().split('T')[0]) return 'Вчера'; 
+                return expenseDates.value.start.split('-').reverse().join('.'); 
+            });
+
+            const expensesTotal = computed(() => expenses.value.reduce((sum, item) => sum + item.amount, 0));
 
             const stats = computed(() => {
                 const rev = washes.value.reduce((a, b) => a + b.price, 0);
@@ -656,20 +714,22 @@
             const openWashModal = (w) => { editingWash.value = {id: w.id, user_id: w.user_id, co_worker_id: w.co_worker_id, date_only: w.date_only, car_model: w.car_model, description: w.description, price: w.price}; showWashModal.value = true; };
 
             onMounted(() => { const u = localStorage.getItem('cw_user'); if(u) { user.value = JSON.parse(u); loadAux(); loadData(); } });
+            
             watch(currentTab, (v) => { localStorage.setItem('cw_tab', v); loadData(); });
             watch(homeDate, () => { if(currentTab.value==='home') { newEntry.value.date = homeDate.value; loadData(); } });
+            watch(expenseDates, () => { localStorage.setItem('cw_exp_dates', JSON.stringify(expenseDates.value)); }, {deep: true});
             watch([reportDates, reportFilterId], () => { if(currentTab.value==='reports') { localStorage.setItem('cw_dates', JSON.stringify(reportDates.value)); loadData(); } }, {deep:true});
 
             return { 
-                user, loginForm, loginError, login, logout, currentTab, tabs, canAccess,
+                user, loginForm, loginError, login, logout, currentTab, tabs, canAccess, loadData,
                 washes, expenses, usersList, servicesList, newEntry, newExpense, selectedService,
-                homeDate, reportDates, reportFilterId, stats, formatMoney, formatDate,
+                homeDate, expenseDates, reportDates, reportFilterId, stats, expensesTotal, formatMoney, formatDate,
                 showServiceModal, editingService, openServiceModal, saveService, deleteService,
                 showUserModal, editingUser, openUserModal, saveUser, deleteUser,
                 showWashModal, editingWash, openWashModal, saveWash, deleteWash,
                 showProfileModal, profileForm, openProfileModal, saveProfile,
                 addWash, addExpense, onServiceChange, toasts, confirmState,
-                changeDay, fancyDateLabel, selectableWorkers,
+                changeDay, changeExpenseDay, fancyDateLabel, fancyExpenseDateLabel, selectableWorkers,
                 selectedServices, toggleService, customServiceMode, customServiceText, toggleCustomService, updateDescription
             };
         }
