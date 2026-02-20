@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq" // ИЗМЕНЕНО: Драйвер PostgreSQL
 )
 
 const (
 	DBHost = "127.0.0.1"
-	DBPort = "3306"
+	DBPort = "5432"        // ИЗМЕНЕНО: Стандартный порт PostgreSQL
 	DBUser = "diiev"       // Твой пользователь БД
 	DBPass = "331995577Qs" // Твой пароль от БД
 	DBName = "carwash_db"
@@ -39,13 +39,14 @@ type Service struct {
 type Wash struct {
 	ID           int     `json:"id"`
 	UserID       int     `json:"user_id"`
-	CoWorkerID   *int    `json:"co_worker_id"` // Может быть null
+	CoWorkerID   *int    `json:"co_worker_id"`
 	CarModel     string  `json:"car_model"`
 	Description  string  `json:"description"`
 	Price        float64 `json:"price"`
 	DateOnly     string  `json:"date_only"`
+	IsFree       int     `json:"is_free"`
 	WorkerName   string  `json:"worker_name"`
-	CoWorkerName *string `json:"co_worker_name"` // Имя напарника
+	CoWorkerName *string `json:"co_worker_name"`
 }
 type Expense struct {
 	ID       int     `json:"id"`
@@ -71,6 +72,7 @@ type Payload struct {
 	CarModel    string  `json:"car_model"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price"`
+	IsFree      int     `json:"is_free"`
 	Title       string  `json:"title"`
 	Amount      float64 `json:"amount"`
 	Date        string  `json:"date"`
@@ -85,8 +87,9 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4", DBUser, DBPass, DBHost, DBPort, DBName)
-	db, err = sql.Open("mysql", dsn)
+	// ИЗМЕНЕНО: Строка подключения DSN для PostgreSQL
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", DBHost, DBPort, DBUser, DBPass, DBName)
+	db, err = sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -94,7 +97,7 @@ func main() {
 	if err = db.Ping(); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Connected to DB!")
+	fmt.Println("Connected to PostgreSQL DB!")
 
 	http.HandleFunc("/api", corsMiddleware(apiHandler))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "index.html") })
@@ -126,7 +129,8 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	switch action {
 	case "login":
 		var u User
-		err := db.QueryRow("SELECT id, username, password, role, name, is_active FROM users WHERE username=? AND is_active=1", p.Username).Scan(&u.ID, &u.Username, &u.Password, &u.Role, &u.Name, &u.IsActive)
+		// ИЗМЕНЕНО: $1 вместо ?
+		err := db.QueryRow("SELECT id, username, password, role, name, is_active FROM users WHERE username=$1 AND is_active=1", p.Username).Scan(&u.ID, &u.Username, &u.Password, &u.Role, &u.Name, &u.IsActive)
 		if err != nil || u.Password != p.Password {
 			json.NewEncoder(w).Encode(map[string]interface{}{"success": false})
 			return
@@ -134,12 +138,12 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		u.Password = ""
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "user": u})
 
-	case "update_profile": // Обновление своего профиля (логин/пароль)
+	case "update_profile":
 		var err error
 		if p.Password != "" {
-			_, err = db.Exec("UPDATE users SET username=?, password=? WHERE id=?", p.Username, p.Password, p.ID)
+			_, err = db.Exec("UPDATE users SET username=$1, password=$2 WHERE id=$3", p.Username, p.Password, p.ID)
 		} else {
-			_, err = db.Exec("UPDATE users SET username=? WHERE id=?", p.Username, p.ID)
+			_, err = db.Exec("UPDATE users SET username=$1 WHERE id=$2", p.Username, p.ID)
 		}
 		send(w, err)
 
@@ -165,16 +169,16 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if p.ID > 0 {
 			if p.Password != "" {
-				_, err = db.Exec("UPDATE users SET username=?, role=?, name=?, is_active=?, password=? WHERE id=?", p.Username, p.Role, p.Name, act, p.Password, p.ID)
+				_, err = db.Exec("UPDATE users SET username=$1, role=$2, name=$3, is_active=$4, password=$5 WHERE id=$6", p.Username, p.Role, p.Name, act, p.Password, p.ID)
 			} else {
-				_, err = db.Exec("UPDATE users SET username=?, role=?, name=?, is_active=? WHERE id=?", p.Username, p.Role, p.Name, act, p.ID)
+				_, err = db.Exec("UPDATE users SET username=$1, role=$2, name=$3, is_active=$4 WHERE id=$5", p.Username, p.Role, p.Name, act, p.ID)
 			}
 		} else {
-			_, err = db.Exec("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)", p.Username, p.Password, p.Role, p.Name)
+			_, err = db.Exec("INSERT INTO users (username, password, role, name) VALUES ($1, $2, $3, $4)", p.Username, p.Password, p.Role, p.Name)
 		}
 		send(w, err)
 	case "delete_user":
-		_, err := db.Exec("UPDATE users SET is_active = 0 WHERE id = ?", p.ID)
+		_, err := db.Exec("UPDATE users SET is_active = 0 WHERE id = $1", p.ID)
 		send(w, err)
 
 	case "get_services":
@@ -193,34 +197,33 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	case "save_service":
 		var err error
 		if p.ID > 0 {
-			_, err = db.Exec("UPDATE services SET name=?, price=? WHERE id=?", p.ServiceName, p.ServicePrice, p.ID)
+			_, err = db.Exec("UPDATE services SET name=$1, price=$2 WHERE id=$3", p.ServiceName, p.ServicePrice, p.ID)
 		} else {
-			_, err = db.Exec("INSERT INTO services (name, price) VALUES (?, ?)", p.ServiceName, p.ServicePrice)
+			_, err = db.Exec("INSERT INTO services (name, price) VALUES ($1, $2)", p.ServiceName, p.ServicePrice)
 		}
 		send(w, err)
 	case "delete_service":
-		_, err := db.Exec("UPDATE services SET is_active = 0 WHERE id = ?", p.ID)
+		_, err := db.Exec("UPDATE services SET is_active = 0 WHERE id = $1", p.ID)
 		send(w, err)
 
 	case "add_wash":
-		_, err := db.Exec("INSERT INTO washes (user_id, co_worker_id, car_model, description, price, date_only) VALUES (?, ?, ?, ?, ?, ?)", p.UserID, p.CoWorkerID, p.CarModel, p.Description, p.Price, p.Date)
+		_, err := db.Exec("INSERT INTO washes (user_id, co_worker_id, car_model, description, price, date_only, is_free) VALUES ($1, $2, $3, $4, $5, $6, $7)", p.UserID, p.CoWorkerID, p.CarModel, p.Description, p.Price, p.Date, p.IsFree)
 		send(w, err)
 	case "edit_wash":
-		_, err := db.Exec("UPDATE washes SET car_model=?, description=?, price=?, date_only=?, user_id=?, co_worker_id=? WHERE id=?", p.CarModel, p.Description, p.Price, p.Date, p.UserID, p.CoWorkerID, p.ID)
+		_, err := db.Exec("UPDATE washes SET car_model=$1, description=$2, price=$3, date_only=$4, user_id=$5, co_worker_id=$6, is_free=$7 WHERE id=$8", p.CarModel, p.Description, p.Price, p.Date, p.UserID, p.CoWorkerID, p.IsFree, p.ID)
 		send(w, err)
 	case "delete_wash":
-		_, err := db.Exec("DELETE FROM washes WHERE id=?", p.ID)
+		_, err := db.Exec("DELETE FROM washes WHERE id=$1", p.ID)
 		send(w, err)
 
 	case "add_expense":
-		_, err := db.Exec("INSERT INTO expenses (title, amount, date_only) VALUES (?, ?, ?)", p.Title, p.Amount, p.Date)
+		_, err := db.Exec("INSERT INTO expenses (title, amount, date_only) VALUES ($1, $2, $3)", p.Title, p.Amount, p.Date)
 		send(w, err)
-
 	case "edit_expense":
-		_, err := db.Exec("UPDATE expenses SET title=?, amount=?, date_only=? WHERE id=?", p.Title, p.Amount, p.Date, p.ID)
+		_, err := db.Exec("UPDATE expenses SET title=$1, amount=$2, date_only=$3 WHERE id=$4", p.Title, p.Amount, p.Date, p.ID)
 		send(w, err)
 	case "delete_expense":
-		_, err := db.Exec("DELETE FROM expenses WHERE id=?", p.ID)
+		_, err := db.Exec("DELETE FROM expenses WHERE id=$1", p.ID)
 		send(w, err)
 
 	case "get_report":
@@ -228,17 +231,18 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		var washes []Wash
 		var args []interface{}
 
-		query := `SELECT w.id, w.user_id, w.co_worker_id, w.car_model, w.description, w.price, w.date_only, u.name, cu.name 
+		// ИЗМЕНЕНО: Плейсхолдеры $1, $2, $3, $4 для сложных фильтров
+		query := `SELECT w.id, w.user_id, w.co_worker_id, w.car_model, w.description, w.price, w.date_only, w.is_free, u.name, cu.name 
 				  FROM washes w 
 				  LEFT JOIN users u ON w.user_id = u.id 
 				  LEFT JOIN users cu ON w.co_worker_id = cu.id 
-				  WHERE w.date_only BETWEEN ? AND ? `
+				  WHERE w.date_only BETWEEN $1 AND $2 `
 
 		if p.Role == "admin" && p.FilterID > 0 {
-			query += "AND (w.user_id = ? OR w.co_worker_id = ?) "
+			query += "AND (w.user_id = $3 OR w.co_worker_id = $4) "
 			args = []interface{}{p.Start, p.End, p.FilterID, p.FilterID}
 		} else if p.Role == "worker" {
-			query += "AND (w.user_id = ? OR w.co_worker_id = ?) "
+			query += "AND (w.user_id = $3 OR w.co_worker_id = $4) "
 			args = []interface{}{p.Start, p.End, p.UserID, p.UserID}
 		} else {
 			args = []interface{}{p.Start, p.End}
@@ -253,8 +257,9 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				var cwId sql.NullInt64
 				var wName sql.NullString
 				var cwName sql.NullString
+				var isFree sql.NullInt64
 
-				rows.Scan(&w.ID, &w.UserID, &cwId, &w.CarModel, &w.Description, &w.Price, &w.DateOnly, &wName, &cwName)
+				rows.Scan(&w.ID, &w.UserID, &cwId, &w.CarModel, &w.Description, &w.Price, &w.DateOnly, &isFree, &wName, &cwName)
 				if cwId.Valid {
 					id := int(cwId.Int64)
 					w.CoWorkerID = &id
@@ -265,6 +270,9 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				if cwName.Valid {
 					w.CoWorkerName = &cwName.String
 				}
+				if isFree.Valid {
+					w.IsFree = int(isFree.Int64)
+				}
 				washes = append(washes, w)
 			}
 		}
@@ -274,7 +282,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 		var expenses []Expense
 		if p.Role == "admin" {
-			rExp, _ := db.Query("SELECT id, title, amount, date_only FROM expenses WHERE date_only BETWEEN ? AND ? ORDER BY date_only DESC", p.Start, p.End)
+			rExp, _ := db.Query("SELECT id, title, amount, date_only FROM expenses WHERE date_only BETWEEN $1 AND $2 ORDER BY date_only DESC", p.Start, p.End)
 			if rExp != nil {
 				defer rExp.Close()
 				for rExp.Next() {
