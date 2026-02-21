@@ -19,6 +19,7 @@
         .custom-scroll { scrollbar-width: none; }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         
+        /* ПРАВИЛЬНЫЙ ФИКС КАЛЕНДАРЯ ДЛЯ МОБИЛЬНЫХ */
         input[type="date"] { position: relative; }
         input[type="date"]::-webkit-calendar-picker-indicator { 
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
@@ -231,11 +232,11 @@
                         <h3 class="font-bold text-slate-700 text-lg">Лента моек</h3>
                           <div class="text-slate-700 text-lg">Помыто авто: <span class="font-bold">{{ stats.totalCars }} шт.</span></div>
                         <div class="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1"> 
-                      
+                       
                             <button @click="changeDay(-1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-left"></i></button>
                             <div class="relative px-3 min-w-[100px] text-center">
                                 <span class="text-sm font-bold text-slate-700 block">{{ fancyDateLabel }}</span>
-                                <input style ="display:none;" type="date" v-model="homeDate" class="absolute inset-0 opacity-0 cursor-pointer">
+                                <input style="display:none;" type="date" v-model="homeDate" class="absolute inset-0 opacity-0 cursor-pointer">
                             </div>
                             <button @click="changeDay(1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-right"></i></button>
                         </div>
@@ -313,25 +314,39 @@
                              <h2 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-green-300 to-emerald-500 bg-clip-text text-transparent mb-4">{{ formatMoney(stats.netProfit) }}</h2>
                              <div class="flex flex-wrap gap-4 text-sm bg-white/10 p-3 rounded-xl inline-flex backdrop-blur-md">
                                  <div>Касса: <span class="font-bold">{{ formatMoney(stats.totalRevenue) }}</span></div>
-                                 <div class="text-blue-100">Помыто авто: <span class="font-bold">{{ stats.totalCars }} шт.</span></div>
+                                 <div class="text-blue-100">Всего машин: <span class="font-bold">{{ stats.totalCars }} шт.</span></div>
+                                 <div class="text-blue-100">Прибыль: <span class="font-bold">{{ formatMoney(stats.totalRevenue - stats.totalPayroll) }}</span></div>
+                                
                                  <div class="text-blue-300">Фонд ЗП: <span class="font-bold">-{{ formatMoney(stats.totalPayroll) }}</span></div>
                                  <div class="text-red-300">Расходы: <span class="font-bold">-{{ formatMoney(stats.totalExpenses) }}</span></div>
                              </div>
                         </div>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             
                              <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                                <div class="flex items-center justify-between border-b pb-2 mb-4">
-                                    <h4 class="font-bold text-slate-800">Зарплаты <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">За период</span></h4>
+                                <div class="flex items-center justify-between border-b pb-3 mb-4">
+                                    <h4 class="font-bold text-slate-800">Статистика мойщиков</h4>
                                     <button @click="showBonusModal = true" class="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 transition"><i class="fas fa-plus"></i> Округлить</button>
                                 </div>
                                 <div class="space-y-1">
-                                    <div v-for="(data, name) in stats.workerStats" :key="name" class="flex justify-between items-center py-2 text-sm border-b border-slate-50 last:border-0">
-                                        <div class="flex items-center">
-                                            <span class="font-medium text-slate-700">{{ name }}</span>
-                                            <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100 ml-2 shadow-sm" title="Количество машин"><i class="fas fa-car-side mr-1 opacity-70"></i>{{ data.cars }} шт.</span>
+                                    
+                                    <div v-for="(data, name) in stats.workerStats" :key="name" class="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
+                                        <div>
+                                            <div class="flex items-center mb-1">
+                                                <span class="font-bold text-slate-700">{{ name }}</span>
+                                                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 ml-2 shadow-sm" title="Количество помытых машин"><i class="fas fa-car-side mr-1 opacity-70"></i>{{ data.cars }} шт.</span>
+                                            </div>
+                                            <div class="text-[10px] text-slate-400 font-medium">
+                                                Касса: <span class="font-bold text-slate-600">{{ formatMoney(data.revenue) }}</span>
+                                                <span class="mx-1 text-slate-300">•</span> 
+                                                Моя доля: <span class="font-bold text-emerald-600">{{ formatMoney(data.ownerShare) }}</span>
+                                            </div>
                                         </div>
-                                        <span class="font-extrabold text-blue-600">{{ formatMoney(data.earnings) }}</span>
+                                        <div class="text-right">
+                                            <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Зарплата</div>
+                                            <span class="font-extrabold text-blue-600 text-base leading-none block">{{ formatMoney(data.earnings) }}</span>
+                                        </div>
                                     </div>
                                     <div v-if="Object.keys(stats.workerStats).length === 0" class="text-center text-slate-400 text-sm py-4">Нет данных</div>
                                 </div>
@@ -645,7 +660,7 @@
             const reportFilterId = ref(0);
             
             const washes = ref([]); const expenses = ref([]); const usersList = ref([]); const servicesList = ref([]);
-            const bonuses = ref([]);
+            const bonuses = ref([]); 
             
             const newEntry = ref({ date: today, price: '', carModel: '', description: '', selectedWorkerId: null, coWorkerId: null, is_free: false });
             const newExpense = ref({ date: today, title: '', amount: '' });
@@ -825,30 +840,35 @@
 
             const expensesTotal = computed(() => expenses.value.reduce((sum, item) => sum + item.amount, 0));
 
-            // ГЛАВНАЯ ЛОГИКА РАСЧЕТОВ 
             const stats = computed(() => {
                 let actualRevenue = 0;
                 let totalPayroll = 0;
-                const workerStats = {}; // Объект для хранения ЗП и количества машин
-                let totalCars = washes.value.length; // Общее количество машин
+                const workerStats = {}; 
+                let totalCars = washes.value.length; 
                 
                 washes.value.forEach(w => {
                     const basePrice = w.price;
+                    const isFree = w.is_free === 1 || w.is_free === true; 
                     
-                    if (!w.is_free) actualRevenue += basePrice;
+                    const rev = isFree ? 0 : basePrice;
+                    actualRevenue += rev;
                     
-                    const pricePerWorker = w.co_worker_name ? basePrice / 2 : basePrice;
-                    const workerShare = pricePerWorker / 2;
+                    const numWorkers = w.co_worker_name ? 2 : 1;
+                    const revPerWorker = rev / numWorkers;
+                    const workerShare = (basePrice / 2) / numWorkers;
+                    const ownerShare = revPerWorker - workerShare;
                     
-                    // Записываем стату для основного мойщика
-                    if (!workerStats[w.worker_name]) workerStats[w.worker_name] = { earnings: 0, cars: 0 };
+                    if (!workerStats[w.worker_name]) workerStats[w.worker_name] = { earnings: 0, cars: 0, revenue: 0, ownerShare: 0 };
                     workerStats[w.worker_name].earnings += workerShare;
+                    workerStats[w.worker_name].revenue += revPerWorker;
+                    workerStats[w.worker_name].ownerShare += ownerShare;
                     workerStats[w.worker_name].cars += 1;
                     
-                    // Записываем стату для напарника (если он есть)
                     if (w.co_worker_name) {
-                        if (!workerStats[w.co_worker_name]) workerStats[w.co_worker_name] = { earnings: 0, cars: 0 };
+                        if (!workerStats[w.co_worker_name]) workerStats[w.co_worker_name] = { earnings: 0, cars: 0, revenue: 0, ownerShare: 0 };
                         workerStats[w.co_worker_name].earnings += workerShare;
+                        workerStats[w.co_worker_name].revenue += revPerWorker;
+                        workerStats[w.co_worker_name].ownerShare += ownerShare;
                         workerStats[w.co_worker_name].cars += 1;
                     }
                     totalPayroll += (basePrice / 2);
@@ -856,8 +876,9 @@
                 
                 let workerBonusesTotal = 0;
                 bonuses.value.forEach(b => {
-                    if (!workerStats[b.user_name]) workerStats[b.user_name] = { earnings: 0, cars: 0 };
+                    if (!workerStats[b.user_name]) workerStats[b.user_name] = { earnings: 0, cars: 0, revenue: 0, ownerShare: 0 };
                     workerStats[b.user_name].earnings += b.amount;
+                    workerStats[b.user_name].ownerShare -= b.amount; 
                     totalPayroll += b.amount; 
                     
                     if (user.value && b.user_id === user.value.id) {
@@ -868,7 +889,7 @@
                 const exp = expenses.value.reduce((a, b) => a + b.amount, 0);
                 
                 let workerEarnings = 0;
-                let myCars = 0; // Машины текущего работника
+                let myCars = 0; 
                 if (user.value) {
                      workerEarnings = washes.value.reduce((sum, w) => {
                         if (w.user_id === user.value.id || w.co_worker_id === user.value.id) {
@@ -888,7 +909,7 @@
                     totalExpenses: exp, 
                     netProfit: actualRevenue - totalPayroll - exp, 
                     myEarnings: user.value && user.value.role === 'admin' ? (actualRevenue - totalPayroll) : workerEarnings, 
-                    workerStats: workerStats // Передаем на фронт
+                    workerStats: workerStats 
                 };
             });
             
@@ -924,4 +945,4 @@
     }).mount('#app');
 </script>
 </body>
-</html>
+</html>  
