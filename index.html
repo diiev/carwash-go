@@ -229,11 +229,13 @@
 
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-slate-700 text-lg">Лента моек</h3>
-                        <div class="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1">
+                          <div class="text-slate-700 text-lg">Помыто авто: <span class="font-bold">{{ stats.totalCars }} шт.</span></div>
+                        <div class="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1"> 
+                      
                             <button @click="changeDay(-1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-left"></i></button>
                             <div class="relative px-3 min-w-[100px] text-center">
                                 <span class="text-sm font-bold text-slate-700 block">{{ fancyDateLabel }}</span>
-                                <input type="date" v-model="homeDate" class="absolute inset-0 opacity-0 cursor-pointer">
+                                <input style ="display:none;" type="date" v-model="homeDate" class="absolute inset-0 opacity-0 cursor-pointer">
                             </div>
                             <button @click="changeDay(1)" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition"><i class="fas fa-chevron-right"></i></button>
                         </div>
@@ -311,6 +313,7 @@
                              <h2 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-green-300 to-emerald-500 bg-clip-text text-transparent mb-4">{{ formatMoney(stats.netProfit) }}</h2>
                              <div class="flex flex-wrap gap-4 text-sm bg-white/10 p-3 rounded-xl inline-flex backdrop-blur-md">
                                  <div>Касса: <span class="font-bold">{{ formatMoney(stats.totalRevenue) }}</span></div>
+                                 <div class="text-blue-100">Помыто авто: <span class="font-bold">{{ stats.totalCars }} шт.</span></div>
                                  <div class="text-blue-300">Фонд ЗП: <span class="font-bold">-{{ formatMoney(stats.totalPayroll) }}</span></div>
                                  <div class="text-red-300">Расходы: <span class="font-bold">-{{ formatMoney(stats.totalExpenses) }}</span></div>
                              </div>
@@ -323,11 +326,14 @@
                                     <button @click="showBonusModal = true" class="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 transition"><i class="fas fa-plus"></i> Округлить</button>
                                 </div>
                                 <div class="space-y-1">
-                                    <div v-for="(amt, name) in stats.workerBreakdown" :key="name" class="flex justify-between items-center py-2 text-sm border-b border-slate-50 last:border-0">
-                                        <span class="font-medium text-slate-700">{{ name }}</span>
-                                        <span class="font-extrabold text-blue-600">{{ formatMoney(amt) }}</span>
+                                    <div v-for="(data, name) in stats.workerStats" :key="name" class="flex justify-between items-center py-2 text-sm border-b border-slate-50 last:border-0">
+                                        <div class="flex items-center">
+                                            <span class="font-medium text-slate-700">{{ name }}</span>
+                                            <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100 ml-2 shadow-sm" title="Количество машин"><i class="fas fa-car-side mr-1 opacity-70"></i>{{ data.cars }} шт.</span>
+                                        </div>
+                                        <span class="font-extrabold text-blue-600">{{ formatMoney(data.earnings) }}</span>
                                     </div>
-                                    <div v-if="Object.keys(stats.workerBreakdown).length === 0" class="text-center text-slate-400 text-sm py-4">Нет данных</div>
+                                    <div v-if="Object.keys(stats.workerStats).length === 0" class="text-center text-slate-400 text-sm py-4">Нет данных</div>
                                 </div>
 
                                 <div v-if="bonuses.length > 0" class="mt-6 pt-4 border-t border-dashed border-slate-200">
@@ -357,6 +363,18 @@
                     </div>
                     
                     <div v-if="user.role === 'worker'" class="space-y-4">
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Помыто авто</p>
+                                <p class="text-3xl font-extrabold text-slate-800">{{ stats.myCars }} <span class="text-sm text-slate-400 font-medium">шт.</span></p>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Заработано</p>
+                                <p class="text-3xl font-extrabold text-blue-600">{{ formatMoney(stats.myEarnings) }}</p>
+                            </div>
+                        </div>
+
                         <div v-if="bonuses.length > 0" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                             <h5 class="text-xs uppercase font-bold text-slate-400 mb-3">Мои премии / Округления смены:</h5>
                             <div v-for="b in bonuses" :key="b.id" class="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 text-sm">
@@ -627,12 +645,10 @@
             const reportFilterId = ref(0);
             
             const washes = ref([]); const expenses = ref([]); const usersList = ref([]); const servicesList = ref([]);
-            const bonuses = ref([]); // НОВЫЙ МАССИВ ДЛЯ БОНУСОВ
+            const bonuses = ref([]);
             
             const newEntry = ref({ date: today, price: '', carModel: '', description: '', selectedWorkerId: null, coWorkerId: null, is_free: false });
             const newExpense = ref({ date: today, title: '', amount: '' });
-            
-            // Модель для добавления бонуса
             const newBonus = ref({ date: today, user_id: null, amount: '', description: 'Округление смены' });
             
             const selectedServices = ref([]);
@@ -671,7 +687,7 @@
                 const res = await api('get_report', { start, end, user_id: user.value.id, role: user.value.role, filter_id: reportFilterId.value });
                 washes.value = res.washes || []; 
                 expenses.value = res.expenses || [];
-                bonuses.value = res.bonuses || []; // Загружаем бонусы с бэкенда
+                bonuses.value = res.bonuses || []; 
             };
 
             const loadAux = async () => {
@@ -779,7 +795,6 @@
             };
             const deleteExpense = (id) => { confirmAction('Удалить этот расход?', async () => { await api('delete_expense', { id }); loadData(); }); };
 
-            // НОВЫЕ ФУНКЦИИ ДЛЯ БОНУСОВ/ОКРУГЛЕНИЙ
             const addBonus = async () => {
                 if(!newBonus.value.amount || !newBonus.value.user_id) return;
                 await api('add_bonus', {
@@ -814,7 +829,8 @@
             const stats = computed(() => {
                 let actualRevenue = 0;
                 let totalPayroll = 0;
-                const breakdown = {};
+                const workerStats = {}; // Объект для хранения ЗП и количества машин
+                let totalCars = washes.value.length; // Общее количество машин
                 
                 washes.value.forEach(w => {
                     const basePrice = w.price;
@@ -824,18 +840,25 @@
                     const pricePerWorker = w.co_worker_name ? basePrice / 2 : basePrice;
                     const workerShare = pricePerWorker / 2;
                     
-                    breakdown[w.worker_name] = (breakdown[w.worker_name] || 0) + workerShare;
+                    // Записываем стату для основного мойщика
+                    if (!workerStats[w.worker_name]) workerStats[w.worker_name] = { earnings: 0, cars: 0 };
+                    workerStats[w.worker_name].earnings += workerShare;
+                    workerStats[w.worker_name].cars += 1;
+                    
+                    // Записываем стату для напарника (если он есть)
                     if (w.co_worker_name) {
-                        breakdown[w.co_worker_name] = (breakdown[w.co_worker_name] || 0) + workerShare;
+                        if (!workerStats[w.co_worker_name]) workerStats[w.co_worker_name] = { earnings: 0, cars: 0 };
+                        workerStats[w.co_worker_name].earnings += workerShare;
+                        workerStats[w.co_worker_name].cars += 1;
                     }
                     totalPayroll += (basePrice / 2);
                 });
                 
-                // ДОБАВЛЯЕМ БОНУСЫ В ЗАРПЛАТУ
                 let workerBonusesTotal = 0;
                 bonuses.value.forEach(b => {
-                    breakdown[b.user_name] = (breakdown[b.user_name] || 0) + b.amount;
-                    totalPayroll += b.amount; // Владелец платит этот бонус, поэтому ФОТ растет
+                    if (!workerStats[b.user_name]) workerStats[b.user_name] = { earnings: 0, cars: 0 };
+                    workerStats[b.user_name].earnings += b.amount;
+                    totalPayroll += b.amount; 
                     
                     if (user.value && b.user_id === user.value.id) {
                         workerBonusesTotal += b.amount;
@@ -845,23 +868,27 @@
                 const exp = expenses.value.reduce((a, b) => a + b.amount, 0);
                 
                 let workerEarnings = 0;
+                let myCars = 0; // Машины текущего работника
                 if (user.value) {
                      workerEarnings = washes.value.reduce((sum, w) => {
                         if (w.user_id === user.value.id || w.co_worker_id === user.value.id) {
+                            myCars++;
                             return sum + (w.co_worker_name ? w.price / 4 : w.price / 2);
                         }
                         return sum;
                     }, 0);
-                    workerEarnings += workerBonusesTotal; // Плюсуем бонусы к заработку работника
+                    workerEarnings += workerBonusesTotal; 
                 }
 
                 return { 
+                    totalCars,
+                    myCars,
                     totalRevenue: actualRevenue, 
                     totalPayroll: totalPayroll,
                     totalExpenses: exp, 
-                    netProfit: actualRevenue - totalPayroll - exp, // Прибыль уменьшилась на сумму бонуса
+                    netProfit: actualRevenue - totalPayroll - exp, 
                     myEarnings: user.value && user.value.role === 'admin' ? (actualRevenue - totalPayroll) : workerEarnings, 
-                    workerBreakdown: breakdown 
+                    workerStats: workerStats // Передаем на фронт
                 };
             });
             
