@@ -8,14 +8,14 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/lib/pq" // ИЗМЕНЕНО: Драйвер PostgreSQL
+	_ "github.com/lib/pq"
 )
 
 const (
 	DBHost = "127.0.0.1"
-	DBPort = "5432"        // ИЗМЕНЕНО: Стандартный порт PostgreSQL
-	DBUser = "diiev"       // Твой пользователь БД
-	DBPass = "331995577Qs" // Твой пароль от БД
+	DBPort = "5432"
+	DBUser = "diiev"
+	DBPass = "331995577Qs"
 	DBName = "carwash_db"
 )
 
@@ -54,6 +54,17 @@ type Expense struct {
 	Amount   float64 `json:"amount"`
 	DateOnly string  `json:"date_only"`
 }
+
+// НОВАЯ СТРУКТУРА ДЛЯ ОКРУГЛЕНИЙ
+type Bonus struct {
+	ID          int     `json:"id"`
+	UserID      int     `json:"user_id"`
+	UserName    string  `json:"user_name"`
+	Amount      float64 `json:"amount"`
+	DateOnly    string  `json:"date_only"`
+	Description string  `json:"description"`
+}
+
 type Payload struct {
 	Action string `json:"-"`
 	ID     int    `json:"id"`
@@ -66,7 +77,7 @@ type Payload struct {
 	// Service
 	ServiceName  string  `json:"service_name"`
 	ServicePrice float64 `json:"service_price"`
-	// Wash
+	// Wash & Expense & Bonus
 	UserID      int     `json:"user_id"`
 	CoWorkerID  *int    `json:"co_worker_id"`
 	CarModel    string  `json:"car_model"`
@@ -87,7 +98,6 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	// ИЗМЕНЕНО: Строка подключения DSN для PostgreSQL
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", DBHost, DBPort, DBUser, DBPass, DBName)
 	db, err = sql.Open("postgres", dsn)
 	if err != nil {
@@ -129,7 +139,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	switch action {
 	case "login":
 		var u User
-		// ИЗМЕНЕНО: $1 вместо ?
 		err := db.QueryRow("SELECT id, username, password, role, name, is_active FROM users WHERE username=$1 AND is_active=1", p.Username).Scan(&u.ID, &u.Username, &u.Password, &u.Role, &u.Name, &u.IsActive)
 		if err != nil || u.Password != p.Password {
 			json.NewEncoder(w).Encode(map[string]interface{}{"success": false})
@@ -226,12 +235,19 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		_, err := db.Exec("DELETE FROM expenses WHERE id=$1", p.ID)
 		send(w, err)
 
+	// НОВЫЕ МЕТОДЫ ДЛЯ ОКРУГЛЕНИЙ (БОНУСОВ)
+	case "add_bonus":
+		_, err := db.Exec("INSERT INTO bonuses (user_id, amount, date_only, description) VALUES ($1, $2, $3, $4)", p.UserID, p.Amount, p.Date, p.Description)
+		send(w, err)
+	case "delete_bonus":
+		_, err := db.Exec("DELETE FROM bonuses WHERE id=$1", p.ID)
+		send(w, err)
+
 	case "get_report":
 		res := make(map[string]interface{})
 		var washes []Wash
 		var args []interface{}
 
-		// ИЗМЕНЕНО: Плейсхолдеры $1, $2, $3, $4 для сложных фильтров
 		query := `SELECT w.id, w.user_id, w.co_worker_id, w.car_model, w.description, w.price, w.date_only, w.is_free, u.name, cu.name 
 				  FROM washes w 
 				  LEFT JOIN users u ON w.user_id = u.id 
@@ -281,7 +297,10 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var expenses []Expense
+		var bonuses []Bonus // Добавляем массив для бонусов
+
 		if p.Role == "admin" {
+			// Расходы
 			rExp, _ := db.Query("SELECT id, title, amount, date_only FROM expenses WHERE date_only BETWEEN $1 AND $2 ORDER BY date_only DESC", p.Start, p.End)
 			if rExp != nil {
 				defer rExp.Close()
@@ -291,13 +310,52 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 					expenses = append(expenses, e)
 				}
 			}
+
+			// Округления (Бонусы)
+			bQuery := `SELECT b.id, b.user_id, b.amount, b.date_only, b.description, u.name 
+					   FROM bonuses b JOIN users u ON b.user_id = u.id 
+					   WHERE b.date_only BETWEEN $1 AND $2 `
+			var bArgs []interface{}
+			if p.FilterID > 0 {
+				bQuery += "AND b.user_id = $3 "
+				bArgs = []interface{}{p.Start, p.End, p.FilterID}
+			} else {
+				bArgs = []interface{}{p.Start, p.End}
+			}
+			bQuery += "ORDER BY b.date_only DESC"
+
+			rBonuses, _ := db.Query(bQuery, bArgs...)
+			if rBonuses != nil {
+				defer rBonuses.Close()
+				for rBonuses.Next() {
+					var b Bonus
+					rBonuses.Scan(&b.ID, &b.UserID, &b.Amount, &b.DateOnly, &b.Description, &b.UserName)
+					bonuses = append(bonuses, b)
+				}
+			}
+		} else if p.Role == "worker" {
+			// Работник тоже должен видеть свои округления
+			rBonuses, _ := db.Query("SELECT b.id, b.user_id, b.amount, b.date_only, b.description, u.name FROM bonuses b JOIN users u ON b.user_id = u.id WHERE b.date_only BETWEEN $1 AND $2 AND b.user_id = $3 ORDER BY b.date_only DESC", p.Start, p.End, p.UserID)
+			if rBonuses != nil {
+				defer rBonuses.Close()
+				for rBonuses.Next() {
+					var b Bonus
+					rBonuses.Scan(&b.ID, &b.UserID, &b.Amount, &b.DateOnly, &b.Description, &b.UserName)
+					bonuses = append(bonuses, b)
+				}
+			}
 		}
+
 		if expenses == nil {
 			expenses = []Expense{}
+		}
+		if bonuses == nil {
+			bonuses = []Bonus{}
 		}
 
 		res["washes"] = washes
 		res["expenses"] = expenses
+		res["bonuses"] = bonuses // Отправляем на фронт
 		json.NewEncoder(w).Encode(res)
 
 	default:
