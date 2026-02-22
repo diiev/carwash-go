@@ -19,7 +19,6 @@
         .custom-scroll { scrollbar-width: none; }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         
-        /* ПРАВИЛЬНЫЙ ФИКС КАЛЕНДАРЯ ДЛЯ МОБИЛЬНЫХ */
         input[type="date"] { position: relative; }
         input[type="date"]::-webkit-calendar-picker-indicator { 
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
@@ -139,7 +138,7 @@
                             <p class="text-2xl md:text-3xl font-extrabold">{{ formatMoney(stats.totalRevenue) }}</p>
                         </div>
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                             <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">{{ user.role === 'admin' ? 'Остаток кассы (без ЗП)' : 'Мой заработок' }}</p>
+                             <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">{{ user.role === 'admin' ? 'Моя прибыль (За день)' : 'Мой заработок' }}</p>
                              <p class="text-2xl md:text-3xl font-extrabold text-blue-600">{{ formatMoney(stats.myEarnings) }}</p>
                         </div>
                     </div>
@@ -551,7 +550,7 @@
             </div>
             <div class="mt-8 flex gap-3">
                 <button @click="showBonusModal=false" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition">Отмена</button>
-                <button @click="addBonus" :disabled="!newBonus.amount || !newBonus.user_id" class="w-1/2 py-3 bg-green-500 disabled:opacity-50 text-white rounded-xl font-bold hover:bg-green-600 shadow-lg transition">Начислить</button>
+                <button @click="addBonus" class="w-1/2 py-3 bg-green-500 disabled:opacity-50 text-white rounded-xl font-bold hover:bg-green-600 shadow-lg transition">Начислить</button>
             </div>
         </div>
     </div>
@@ -817,17 +816,40 @@
                 newBonus.value.date = currentTab.value === 'reports' ? reportDates.value.end : today;
                 newBonus.value.amount = '';
                 newBonus.value.description = 'Округление смены';
+                
+                // ИСПРАВЛЕНИЕ: Автоматически выбираем первого сотрудника, чтобы не было ошибки пустого поля
+                if(selectableWorkers.value.length > 0) {
+                    newBonus.value.user_id = selectableWorkers.value[0].id;
+                }
+                
                 showBonusModal.value = true;
             };
 
             const addBonus = async () => {
-                if(!newBonus.value.amount || !newBonus.value.user_id) return;
-                await api('add_bonus', {
+                // ИСПРАВЛЕНИЕ: Добавлены предупреждения
+                if(!newBonus.value.amount) {
+                    showToast('Внимание', 'Введите сумму', 'error');
+                    return;
+                }
+                if(!newBonus.value.user_id) {
+                    showToast('Внимание', 'Выберите сотрудника', 'error');
+                    return;
+                }
+                
+                const res = await api('add_bonus', {
                     user_id: newBonus.value.user_id,
                     amount: Number(newBonus.value.amount),
                     date: newBonus.value.date,
                     description: newBonus.value.description || 'Округление'
                 });
+                
+                if(!res.success) {
+                    showToast('Ошибка базы', res.error || 'Не удалось начислить', 'error');
+                    return;
+                }
+                
+                newBonus.value.amount = '';
+                newBonus.value.description = 'Округление смены';
                 showBonusModal.value = false;
                 showToast('Начислено', 'Сумма добавлена к ЗП');
                 loadData();
