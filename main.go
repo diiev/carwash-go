@@ -54,8 +54,6 @@ type Expense struct {
 	Amount   float64 `json:"amount"`
 	DateOnly string  `json:"date_only"`
 }
-
-// НОВАЯ СТРУКТУРА ДЛЯ ОКРУГЛЕНИЙ
 type Bonus struct {
 	ID          int     `json:"id"`
 	UserID      int     `json:"user_id"`
@@ -66,30 +64,27 @@ type Bonus struct {
 }
 
 type Payload struct {
-	Action string `json:"-"`
-	ID     int    `json:"id"`
-	// User
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Role     string `json:"role"`
-	Name     string `json:"name"`
-	IsActive *int   `json:"is_active"`
-	// Service
+	Action       string  `json:"-"`
+	ID           int     `json:"id"`
+	Username     string  `json:"username"`
+	Password     string  `json:"password"`
+	Role         string  `json:"role"`
+	Name         string  `json:"name"`
+	IsActive     *int    `json:"is_active"`
 	ServiceName  string  `json:"service_name"`
 	ServicePrice float64 `json:"service_price"`
-	// Wash & Expense & Bonus
-	UserID      int     `json:"user_id"`
-	CoWorkerID  *int    `json:"co_worker_id"`
-	CarModel    string  `json:"car_model"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
-	IsFree      int     `json:"is_free"`
-	Title       string  `json:"title"`
-	Amount      float64 `json:"amount"`
-	Date        string  `json:"date"`
-	Start       string  `json:"start"`
-	End         string  `json:"end"`
-	FilterID    int     `json:"filter_id"`
+	UserID       int     `json:"user_id"`
+	CoWorkerID   *int    `json:"co_worker_id"`
+	CarModel     string  `json:"car_model"`
+	Description  string  `json:"description"`
+	Price        float64 `json:"price"`
+	IsFree       int     `json:"is_free"`
+	Title        string  `json:"title"`
+	Amount       float64 `json:"amount"`
+	Date         string  `json:"date"`
+	Start        string  `json:"start"`
+	End          string  `json:"end"`
+	FilterID     int     `json:"filter_id"`
 }
 
 func main() {
@@ -235,7 +230,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		_, err := db.Exec("DELETE FROM expenses WHERE id=$1", p.ID)
 		send(w, err)
 
-	// НОВЫЕ МЕТОДЫ ДЛЯ ОКРУГЛЕНИЙ (БОНУСОВ)
 	case "add_bonus":
 		_, err := db.Exec("INSERT INTO bonuses (user_id, amount, date_only, description) VALUES ($1, $2, $3, $4)", p.UserID, p.Amount, p.Date, p.Description)
 		send(w, err)
@@ -248,7 +242,8 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		var washes []Wash
 		var args []interface{}
 
-		query := `SELECT w.id, w.user_id, w.co_worker_id, w.car_model, w.description, w.price, w.date_only, w.is_free, u.name, cu.name 
+		// ЗАЩИТА: TO_CHAR для безопасной передачи даты в виде строки
+		query := `SELECT w.id, w.user_id, w.co_worker_id, w.car_model, w.description, w.price, TO_CHAR(w.date_only, 'YYYY-MM-DD'), w.is_free, u.name, cu.name 
 				  FROM washes w 
 				  LEFT JOIN users u ON w.user_id = u.id 
 				  LEFT JOIN users cu ON w.co_worker_id = cu.id 
@@ -275,7 +270,10 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				var cwName sql.NullString
 				var isFree sql.NullInt64
 
-				rows.Scan(&w.ID, &w.UserID, &cwId, &w.CarModel, &w.Description, &w.Price, &w.DateOnly, &isFree, &wName, &cwName)
+				if err := rows.Scan(&w.ID, &w.UserID, &cwId, &w.CarModel, &w.Description, &w.Price, &w.DateOnly, &isFree, &wName, &cwName); err != nil {
+					log.Println("Ошибка чтения мойки:", err)
+					continue
+				}
 				if cwId.Valid {
 					id := int(cwId.Int64)
 					w.CoWorkerID = &id
@@ -291,18 +289,19 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				washes = append(washes, w)
 			}
+		} else {
+			log.Println("Ошибка запроса моек:", err)
 		}
 		if washes == nil {
 			washes = []Wash{}
 		}
 
 		var expenses []Expense
-		var bonuses []Bonus // Добавляем массив для бонусов
+		var bonuses []Bonus
 
 		if p.Role == "admin" {
-			// Расходы
-			rExp, _ := db.Query("SELECT id, title, amount, date_only FROM expenses WHERE date_only BETWEEN $1 AND $2 ORDER BY date_only DESC", p.Start, p.End)
-			if rExp != nil {
+			rExp, err := db.Query("SELECT id, title, amount, TO_CHAR(date_only, 'YYYY-MM-DD') FROM expenses WHERE date_only BETWEEN $1 AND $2 ORDER BY date_only DESC", p.Start, p.End)
+			if err == nil {
 				defer rExp.Close()
 				for rExp.Next() {
 					var e Expense
@@ -311,8 +310,8 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			// Округления (Бонусы)
-			bQuery := `SELECT b.id, b.user_id, b.amount, b.date_only, b.description, u.name 
+			// ЗАЩИТА: TO_CHAR и COALESCE для гарантии, что пустота не сломает чтение
+			bQuery := `SELECT b.id, b.user_id, b.amount, TO_CHAR(b.date_only, 'YYYY-MM-DD'), COALESCE(b.description, ''), COALESCE(u.name, '') 
 					   FROM bonuses b JOIN users u ON b.user_id = u.id 
 					   WHERE b.date_only BETWEEN $1 AND $2 `
 			var bArgs []interface{}
@@ -324,19 +323,23 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			bQuery += "ORDER BY b.date_only DESC"
 
-			rBonuses, _ := db.Query(bQuery, bArgs...)
-			if rBonuses != nil {
+			rBonuses, err := db.Query(bQuery, bArgs...)
+			if err == nil {
 				defer rBonuses.Close()
 				for rBonuses.Next() {
 					var b Bonus
-					rBonuses.Scan(&b.ID, &b.UserID, &b.Amount, &b.DateOnly, &b.Description, &b.UserName)
+					if err := rBonuses.Scan(&b.ID, &b.UserID, &b.Amount, &b.DateOnly, &b.Description, &b.UserName); err != nil {
+						log.Println("Ошибка чтения бонуса:", err)
+						continue
+					}
 					bonuses = append(bonuses, b)
 				}
+			} else {
+				log.Println("Ошибка запроса бонусов:", err)
 			}
 		} else if p.Role == "worker" {
-			// Работник тоже должен видеть свои округления
-			rBonuses, _ := db.Query("SELECT b.id, b.user_id, b.amount, b.date_only, b.description, u.name FROM bonuses b JOIN users u ON b.user_id = u.id WHERE b.date_only BETWEEN $1 AND $2 AND b.user_id = $3 ORDER BY b.date_only DESC", p.Start, p.End, p.UserID)
-			if rBonuses != nil {
+			rBonuses, err := db.Query("SELECT b.id, b.user_id, b.amount, TO_CHAR(b.date_only, 'YYYY-MM-DD'), COALESCE(b.description, ''), COALESCE(u.name, '') FROM bonuses b JOIN users u ON b.user_id = u.id WHERE b.date_only BETWEEN $1 AND $2 AND b.user_id = $3 ORDER BY b.date_only DESC", p.Start, p.End, p.UserID)
+			if err == nil {
 				defer rBonuses.Close()
 				for rBonuses.Next() {
 					var b Bonus
@@ -355,7 +358,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 		res["washes"] = washes
 		res["expenses"] = expenses
-		res["bonuses"] = bonuses // Отправляем на фронт
+		res["bonuses"] = bonuses
 		json.NewEncoder(w).Encode(res)
 
 	default:
